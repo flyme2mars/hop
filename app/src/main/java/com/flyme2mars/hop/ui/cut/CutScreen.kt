@@ -1,33 +1,33 @@
 package com.flyme2mars.hop.ui.cut
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Sos
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,26 +42,33 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.flyme2mars.hop.HopAppState
 import com.flyme2mars.hop.R
 import com.flyme2mars.hop.ui.theme.CutBlack
 import com.flyme2mars.hop.ui.theme.CutFlame
-import com.flyme2mars.hop.ui.theme.CutOkContainer
-import com.flyme2mars.hop.ui.theme.CutOkOnContainer
 import com.flyme2mars.hop.ui.theme.CutOnBlack
 import com.flyme2mars.hop.ui.theme.CutOnBlackMuted
 import com.flyme2mars.hop.ui.theme.CutOnFlame
+import com.flyme2mars.hop.ui.theme.CutWarmWhite
+import com.flyme2mars.hop.ui.theme.HopCutCtaShape
 import com.flyme2mars.hop.ui.theme.HopMotion
+import com.flyme2mars.hop.ui.theme.HopTokens
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.PI
+import kotlin.math.sin
 import kotlinx.coroutines.delay
 
 @Composable
@@ -93,8 +100,8 @@ fun CutScreen(
 
     val screenAlpha by animateFloatAsState(
         targetValue = if (entered) 1f else 0f,
-        animationSpec = motion.cutCrossfade(),
-        label = "cutCrossfade",
+        animationSpec = motion.cutEnter(),
+        label = "cutEnter",
     )
     val clockAlpha by animateFloatAsState(
         targetValue = if (entered) 1f else 0f,
@@ -102,18 +109,18 @@ fun CutScreen(
         label = "cutClockFade",
     )
 
-    val infinite = rememberInfiniteTransition(label = "cutFlame")
-    val breathPulse by infinite.animateFloat(
-        initialValue = 0.94f,
-        targetValue = 1.06f,
+    val infinite = rememberInfiniteTransition(label = "cutCandle")
+    val phase by infinite.animateFloat(
+        initialValue = 0f,
+        targetValue = (2.0 * PI).toFloat(),
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1600, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
+            animation = tween(durationMillis = HopTokens.CandleMs, easing = LinearEasing),
         ),
-        label = "cutFlameScale",
+        label = "cutSine",
     )
-    val breath = if (motion.reduced) 1f else breathPulse
-    val breathAlpha = if (motion.reduced) 1f else 0.72f + ((breath - 0.94f) / 0.12f) * 0.28f
+    val sine = sin(phase.toDouble()).toFloat()
+    val breathScale = if (motion.reduced) 1f else 1f + 0.06f * sine
+    val bloomAlpha = if (motion.reduced) 0.34f else 0.28f + 0.10f * (sine * 0.5f + 0.5f)
 
     val timeText = remember(now) { now.format(DateTimeFormatter.ofPattern("HH:mm")) }
     val dateText = remember(now) {
@@ -130,7 +137,7 @@ fun CutScreen(
                 .alpha(screenAlpha)
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(horizontal = 24.dp, vertical = 12.dp),
+                .padding(horizontal = HopTokens.ScreenGutterWide, vertical = HopTokens.ListGap),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -142,7 +149,10 @@ fun CutScreen(
                     style = MaterialTheme.typography.titleLarge,
                     color = CutOnBlack,
                 )
-                IconButton(onClick = onLeave) {
+                IconButton(
+                    onClick = onLeave,
+                    modifier = Modifier.size(HopTokens.Touch),
+                ) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
                         contentDescription = stringResource(R.string.cd_leave_cut),
@@ -153,42 +163,67 @@ fun CutScreen(
 
             Spacer(Modifier.weight(1f))
 
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .alpha(clockAlpha),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentAlignment = Alignment.Center,
             ) {
                 Canvas(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(200.dp)
                         .graphicsLayer {
-                            scaleX = breath
-                            scaleY = breath
-                            alpha = breathAlpha
+                            if (!motion.reduced) {
+                                scaleX = breathScale
+                                scaleY = breathScale
+                            }
+                            alpha = bloomAlpha
                         },
                 ) {
-                    drawPath(flamePath(size), color = CutFlame)
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                CutFlame.copy(alpha = 0.55f),
+                                Color.Transparent,
+                            ),
+                        ),
+                    )
                 }
-                Text(
-                    text = timeText,
-                    style = MaterialTheme.typography.displayLarge,
-                    color = CutFlame,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    text = dateText,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = CutOnBlackMuted,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    text = pluralStringResource(R.plurals.cut_nearby, nearbyCount, nearbyCount),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = CutOnBlackMuted,
-                    textAlign = TextAlign.Center,
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(HopTokens.ListGap),
+                ) {
+                    Canvas(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .graphicsLayer {
+                                if (!motion.reduced) {
+                                    scaleX = breathScale
+                                    scaleY = breathScale
+                                }
+                            },
+                    ) {
+                        drawPath(flamePath(size), color = CutFlame)
+                    }
+                    Text(
+                        text = timeText,
+                        style = MaterialTheme.typography.displayLarge,
+                        color = CutFlame,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        text = dateText,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = CutOnBlackMuted,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        text = pluralStringResource(R.plurals.cut_nearby, nearbyCount, nearbyCount),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = CutOnBlackMuted,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
 
             Spacer(Modifier.weight(1f))
@@ -203,54 +238,72 @@ fun CutScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 12.dp),
+                        .padding(bottom = HopTokens.ListGap),
                     style = MaterialTheme.typography.bodyLarge,
                     color = CutOnBlack,
                     textAlign = TextAlign.Center,
                 )
             }
 
-            FilledTonalButton(
+            CutGradientButton(
+                text = stringResource(R.string.cut_ok),
+                icon = { Icon(Icons.Outlined.Check, contentDescription = null, tint = CutOnFlame) },
                 onClick = onOk,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = CutOkContainer,
-                    contentColor = CutOkOnContainer,
-                ),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Check,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp),
-                )
-                Text(
-                    text = stringResource(R.string.cut_ok),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
-            Spacer(Modifier.height(10.dp))
-            Button(
+            )
+            Spacer(Modifier.height(HopTokens.Radius8 + HopTokens.Radius4))
+            CutOutlineButton(
+                text = stringResource(R.string.cut_help),
+                icon = { Icon(Icons.Outlined.Sos, contentDescription = null, tint = Color.White) },
                 onClick = onHelp,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = CutFlame,
-                    contentColor = CutOnFlame,
-                ),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Sos,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp),
-                )
-                Text(
-                    text = stringResource(R.string.cut_help),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
-            Spacer(Modifier.height(12.dp))
+            )
+            Spacer(Modifier.height(HopTokens.ListGap))
         }
+    }
+}
+
+@Composable
+private fun CutGradientButton(
+    text: String,
+    icon: @Composable () -> Unit,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = HopTokens.Touch)
+            .clip(HopCutCtaShape)
+            .background(Brush.horizontalGradient(listOf(CutFlame, CutWarmWhite)))
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = HopTokens.CardPadding, vertical = HopTokens.Radius12),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        icon()
+        Spacer(Modifier.size(HopTokens.Radius8))
+        Text(text = text, style = MaterialTheme.typography.labelLarge, color = CutOnFlame)
+    }
+}
+
+@Composable
+private fun CutOutlineButton(
+    text: String,
+    icon: @Composable () -> Unit,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = HopTokens.Touch)
+            .clip(HopCutCtaShape)
+            .border(width = 1.5.dp, color = Color.White, shape = HopCutCtaShape)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = HopTokens.CardPadding, vertical = HopTokens.Radius12),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        icon()
+        Spacer(Modifier.size(HopTokens.Radius8))
+        Text(text = text, style = MaterialTheme.typography.labelLarge, color = Color.White)
     }
 }
 

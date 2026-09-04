@@ -27,7 +27,7 @@ fun HopApp() {
     HopTheme(cutMode = cutMode) {
         Crossfade(
             targetState = state.route,
-            animationSpec = motion.cutCrossfade(),
+            animationSpec = motion.cutEnter(),
             modifier = Modifier.fillMaxSize(),
             label = "hopRoute",
         ) { route ->
@@ -57,6 +57,7 @@ fun HopApp() {
                 post = detail,
                 onDismiss = state::dismissSheets,
                 onClaim = { state.openClaim(detail) },
+                onRemove = state::removeSelected,
             )
         }
         if (state.showClaimSheet && detail != null) {

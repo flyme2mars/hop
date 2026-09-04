@@ -5,17 +5,22 @@ import androidx.compose.ui.graphics.Color
 /** True blackout. Cut mode only — not an everyday surface. */
 val CutBlack = Color(0xFF000000)
 
-/** Candle accent. Clock and the primary Cut CTA only. */
+/** Candle accent. Clock bloom and Cut CTAs only. */
 val CutFlame = Color(0xFFE8B86D)
-
+val CutWarmWhite = Color(0xFFFFF6E8)
 val CutOnFlame = Color(0xFF1A1206)
 val CutOnBlack = Color(0xFFEDE6D6)
 val CutOnBlackMuted = Color(0xFFB9B2A4)
-val CutOkContainer = Color(0xFF1A1A1A)
-val CutOkOnContainer = Color(0xFFE8E8E8)
+
+/** Everyday dark ladder — deep, not Cut #000. */
+val EverydayDarkFloor = Color(0xFF0A0A0A)
+val EverydayDarkContainerLow = Color(0xFF101010)
+val EverydayDarkContainer = Color(0xFF141414)
+val EverydayDarkContainerHigh = Color(0xFF1A1A1A)
+val EverydayDarkContainerHighest = Color(0xFF222222)
 
 // Mono fallback when dynamic color is unavailable (pre-Android 12).
-// Graphite only — HopGreen / HopSand are retired from product UI.
+// Graphite only — HopGreen / HopSand stay retired.
 
 val MonoLightPrimary = Color(0xFF2C2C2C)
 val MonoLightOnPrimary = Color(0xFFFFFFFF)
@@ -58,17 +63,17 @@ val MonoDarkTertiary = Color(0xFFB8B8B8)
 val MonoDarkOnTertiary = Color(0xFF1F1F1F)
 val MonoDarkTertiaryContainer = Color(0xFF3F3F3F)
 val MonoDarkOnTertiaryContainer = Color(0xFFE6E6E6)
-val MonoDarkBackground = Color(0xFF121212)
+val MonoDarkBackground = EverydayDarkFloor
 val MonoDarkOnBackground = Color(0xFFE8E8E8)
-val MonoDarkSurface = Color(0xFF121212)
+val MonoDarkSurface = EverydayDarkFloor
 val MonoDarkOnSurface = Color(0xFFE8E8E8)
-val MonoDarkSurfaceVariant = Color(0xFF3A3A3A)
+val MonoDarkSurfaceVariant = Color(0xFF2A2A2A)
 val MonoDarkOnSurfaceVariant = Color(0xFFC4C4C4)
-val MonoDarkSurfaceContainerLowest = Color(0xFF0D0D0D)
-val MonoDarkSurfaceContainerLow = Color(0xFF1A1A1A)
-val MonoDarkSurfaceContainer = Color(0xFF1F1F1F)
-val MonoDarkSurfaceContainerHigh = Color(0xFF2A2A2A)
-val MonoDarkSurfaceContainerHighest = Color(0xFF353535)
+val MonoDarkSurfaceContainerLowest = EverydayDarkFloor
+val MonoDarkSurfaceContainerLow = EverydayDarkContainerLow
+val MonoDarkSurfaceContainer = EverydayDarkContainer
+val MonoDarkSurfaceContainerHigh = EverydayDarkContainerHigh
+val MonoDarkSurfaceContainerHighest = EverydayDarkContainerHighest
 val MonoDarkOutline = Color(0xFF8E8E8E)
 val MonoDarkOutlineVariant = Color(0xFF3F3F3F)
 val MonoDarkInverseSurface = Color(0xFFE6E6E6)

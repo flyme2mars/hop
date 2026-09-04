@@ -1,6 +1,7 @@
 package com.flyme2mars.hop.ui.theme
 
 import android.provider.Settings
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.snap
@@ -15,20 +16,26 @@ data class HopMotion(
     val reduced: Boolean,
 ) {
     fun <T> fade(): FiniteAnimationSpec<T> =
-        if (reduced) snap() else tween(durationMillis = 280)
+        if (reduced) snap() else tween(HopTokens.MotionBase, easing = FastOutSlowInEasing)
 
-    fun <T> cutCrossfade(): FiniteAnimationSpec<T> =
-        if (reduced) snap() else tween(durationMillis = 420)
+    fun <T> cutEnter(): FiniteAnimationSpec<T> =
+        if (reduced) snap() else tween(HopTokens.CutEnterMs, easing = FastOutSlowInEasing)
 
     fun <T> clockFade(): FiniteAnimationSpec<T> =
-        if (reduced) snap() else tween(durationMillis = 720, delayMillis = 90)
+        if (reduced) snap() else tween(HopTokens.CutClockMs, easing = FastOutSlowInEasing)
+
+    fun <T> chipSelect(): FiniteAnimationSpec<T> =
+        if (reduced) snap() else tween(HopTokens.ChipSelectMs, easing = FastOutSlowInEasing)
+
+    fun <T> press(): FiniteAnimationSpec<T> =
+        if (reduced) snap() else tween(HopTokens.PressMs, easing = FastOutSlowInEasing)
 
     fun <T> fabSpring(): FiniteAnimationSpec<T> =
         if (reduced) {
             snap()
         } else {
             spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
+                dampingRatio = HopTokens.SpringDamping,
                 stiffness = Spring.StiffnessMediumLow,
             )
         }
@@ -38,7 +45,7 @@ data class HopMotion(
             snap()
         } else {
             spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
+                dampingRatio = HopTokens.SpringDamping,
                 stiffness = Spring.StiffnessMediumLow,
             )
         }

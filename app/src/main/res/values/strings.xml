@@ -4,9 +4,9 @@
 
     <string name="onboarding_title">Hop</string>
     <string name="onboarding_tagline">The floor stays up when the tower doesn\'t.</string>
-    <string name="onboarding_body">Notes hop between phones on this hostel floor. No login. This build uses fake posts so you can feel the app without a radio.</string>
+    <string name="onboarding_body">Asks, offers, and notes hop between phones on this hostel floor. No login. This build uses fake posts so you can feel the app without a radio.</string>
     <string name="onboarding_floor_title">Floor</string>
-    <string name="onboarding_floor_body">Requests, offers, and alerts sit on tonal cards — the board for this corridor.</string>
+    <string name="onboarding_floor_body">Asks, offers, and notes sit on tonal cards — the board for this corridor.</string>
     <string name="onboarding_nearby_title">Nearby</string>
     <string name="onboarding_nearby_body">A quiet count of phones in range. Not a banner. Not a mesh status scream.</string>
     <string name="onboarding_cut_title">Cut</string>
@@ -18,20 +18,20 @@
     <string name="tab_history">History</string>
     <string name="tab_settings">Settings</string>
 
-    <string name="floor_title">Floor</string>
     <string name="floor_empty_title">Nothing in this filter</string>
     <string name="floor_empty_body">Try another chip, or post something for this floor.</string>
-    <string name="fab_post">Post</string>
+    <string name="floor_empty_cta">Post</string>
     <string name="cd_open_cut">Open Cut</string>
+    <string name="cd_post">Post</string>
 
     <string name="filter_all">All</string>
-    <string name="filter_requests">Requests</string>
+    <string name="filter_asks">Asks</string>
     <string name="filter_offers">Offers</string>
-    <string name="filter_alerts">Alerts</string>
+    <string name="filter_notes">Notes</string>
 
-    <string name="kind_request">Request</string>
+    <string name="kind_ask">Ask</string>
     <string name="kind_offer">Offer</string>
-    <string name="kind_alert">Alert</string>
+    <string name="kind_note">Note</string>
 
     <string name="post_meta">%1$s · %2$s</string>
     <string name="post_claimed">Claimed</string>
@@ -44,21 +44,25 @@
     <string name="post_cta">Post</string>
 
     <string name="post_detail_title">Post</string>
-    <string name="post_detail_no_claim">This note is on the board. Requests can be claimed.</string>
+    <string name="post_detail_no_claim">This note is on the board. Asks can be claimed.</string>
     <string name="post_already_claimed">Claimed by %1$s</string>
     <string name="claim_cta_short">Claim</string>
     <string name="claim_sheet_title">Claim this?</string>
-    <string name="claim_sheet_body">You\'ll take %1$s\'s request. The floor will see it as claimed — still local demo data.</string>
+    <string name="claim_sheet_body">You\'ll take %1$s\'s ask. The floor will see it as claimed — still local demo data.</string>
     <string name="claim_cta">Claim it</string>
+    <string name="claim_dismiss">Dismiss</string>
+    <string name="claim_remove">Remove</string>
+    <string name="claim_remove_confirm">Confirm remove</string>
 
     <string name="cut_title">Cut</string>
     <string name="cut_ok">I\'m OK</string>
     <string name="cut_help">Need help</string>
     <string name="cd_leave_cut">Leave Cut</string>
 
-    <string name="history_title">History</string>
+    <string name="history_empty_title">No history yet</string>
+    <string name="history_empty_body">Closed asks and offers will land here.</string>
+    <string name="history_empty_cta">Back to Floor</string>
 
-    <string name="settings_title">Settings</string>
     <string name="settings_nearby_title">Mesh nearby</string>
     <string name="settings_demo_title">Demo board</string>
     <string name="settings_demo_body">Local fake posts only. No Bluetooth, no mesh protocol, no radio.</string>

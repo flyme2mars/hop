@@ -127,6 +127,16 @@ class HopAppState(context: Context) {
                 existing
             }
         }
+        selectedPost = posts.firstOrNull { it.id == post.id }
+        dismissSheets()
+    }
+
+    fun removeSelected() {
+        val post = selectedPost ?: return
+        posts = posts.map { existing ->
+            if (existing.id == post.id) existing.copy(claimedBy = null) else existing
+        }
+        selectedPost = posts.firstOrNull { it.id == post.id }
         dismissSheets()
     }
 

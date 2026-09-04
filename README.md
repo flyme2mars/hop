@@ -9,7 +9,7 @@ This repository contains a Kotlin + Jetpack Compose Android app. The current bui
 Material You shell following the “Pixel floor, candle blackout” lock:
 
 - Everyday: dynamic color, system light/dark, mono fallback, primary on FAB/CTAs only
-- Floor board with 8 fake posts, filter chips, post sheet, claim sheet
+- Floor board with 8 fake posts (Ask / Offer / Note), filter chips, post sheet, claim sheet
 - Cut: true black, candle clock, **I’m OK** / **Need help**
 - History and Settings
 - Nearby shown as a quiet “n nearby” chip — not a banner

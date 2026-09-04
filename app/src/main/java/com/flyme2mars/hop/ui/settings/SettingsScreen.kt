@@ -1,7 +1,6 @@
 package com.flyme2mars.hop.ui.settings
 
 import android.os.Build
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -16,7 +15,10 @@ import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Sensors
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -24,10 +26,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.flyme2mars.hop.R
-import com.flyme2mars.hop.ui.components.HopScreenHeader
-import com.flyme2mars.hop.ui.floor.HopCardShape
+import com.flyme2mars.hop.ui.theme.HopCardShape
+import com.flyme2mars.hop.ui.theme.HopTokens
 
 @Composable
 fun SettingsScreen(
@@ -36,80 +37,117 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
+    val itemColors = ListItemDefaults.colors(containerColor = scheme.surfaceContainer)
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(contentPadding)
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 24.dp),
+            .padding(horizontal = HopTokens.ScreenGutter)
+            .padding(bottom = HopTokens.SectionGap),
     ) {
-        HopScreenHeader(title = stringResource(R.string.settings_title))
         SettingsGroup {
-            SettingsRow(
-                icon = {
-                    Icon(
-                        imageVector = Icons.Outlined.Sensors,
-                        contentDescription = null,
-                        tint = scheme.onSurfaceVariant,
+            ListItem(
+                headlineContent = {
+                    Text(
+                        text = stringResource(R.string.settings_nearby_title),
+                        style = MaterialTheme.typography.titleMedium,
                     )
                 },
-                title = stringResource(R.string.settings_nearby_title),
-                body = pluralStringResource(R.plurals.nearby_count, nearbyCount, nearbyCount),
+                supportingContent = {
+                    Text(
+                        text = pluralStringResource(R.plurals.nearby_count, nearbyCount, nearbyCount),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                },
+                leadingContent = {
+                    Icon(Icons.Outlined.Sensors, contentDescription = null)
+                },
+                colors = itemColors,
             )
-            SettingsRow(
-                icon = {
-                    Icon(
-                        imageVector = Icons.Outlined.Info,
-                        contentDescription = null,
-                        tint = scheme.onSurfaceVariant,
+            HorizontalDivider(color = scheme.outlineVariant)
+            ListItem(
+                headlineContent = {
+                    Text(
+                        text = stringResource(R.string.settings_demo_title),
+                        style = MaterialTheme.typography.titleMedium,
                     )
                 },
-                title = stringResource(R.string.settings_demo_title),
-                body = stringResource(R.string.settings_demo_body),
+                supportingContent = {
+                    Text(
+                        text = stringResource(R.string.settings_demo_body),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                },
+                leadingContent = {
+                    Icon(Icons.Outlined.Info, contentDescription = null)
+                },
+                colors = itemColors,
             )
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(HopTokens.ListGap))
         SettingsGroup {
-            SettingsRow(
-                icon = {
-                    Icon(
-                        imageVector = Icons.Outlined.Contrast,
-                        contentDescription = null,
-                        tint = scheme.onSurfaceVariant,
+            ListItem(
+                headlineContent = {
+                    Text(
+                        text = stringResource(R.string.settings_theme_title),
+                        style = MaterialTheme.typography.titleMedium,
                     )
                 },
-                title = stringResource(R.string.settings_theme_title),
-                body = stringResource(R.string.settings_theme_body),
+                supportingContent = {
+                    Text(
+                        text = stringResource(R.string.settings_theme_body),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                },
+                leadingContent = {
+                    Icon(Icons.Outlined.Contrast, contentDescription = null)
+                },
+                colors = itemColors,
             )
-            SettingsRow(
-                icon = {
-                    Icon(
-                        imageVector = Icons.Outlined.Palette,
-                        contentDescription = null,
-                        tint = scheme.onSurfaceVariant,
+            HorizontalDivider(color = scheme.outlineVariant)
+            ListItem(
+                headlineContent = {
+                    Text(
+                        text = stringResource(R.string.settings_dynamic_title),
+                        style = MaterialTheme.typography.titleMedium,
                     )
                 },
-                title = stringResource(R.string.settings_dynamic_title),
-                body = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    stringResource(R.string.settings_dynamic_body)
-                } else {
-                    stringResource(R.string.settings_dynamic_fallback)
+                supportingContent = {
+                    Text(
+                        text = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            stringResource(R.string.settings_dynamic_body)
+                        } else {
+                            stringResource(R.string.settings_dynamic_fallback)
+                        },
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
                 },
+                leadingContent = {
+                    Icon(Icons.Outlined.Palette, contentDescription = null)
+                },
+                colors = itemColors,
             )
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(HopTokens.ListGap))
         SettingsGroup {
-            SettingsRow(
-                icon = {
-                    Icon(
-                        imageVector = Icons.Outlined.Info,
-                        contentDescription = null,
-                        tint = scheme.onSurfaceVariant,
+            ListItem(
+                headlineContent = {
+                    Text(
+                        text = stringResource(R.string.settings_about_title),
+                        style = MaterialTheme.typography.titleMedium,
                     )
                 },
-                title = stringResource(R.string.settings_about_title),
-                body = stringResource(R.string.settings_about_body),
+                supportingContent = {
+                    Text(
+                        text = stringResource(R.string.settings_about_body),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                },
+                leadingContent = {
+                    Icon(Icons.Outlined.Info, contentDescription = null)
+                },
+                colors = itemColors,
             )
         }
     }
@@ -122,37 +160,8 @@ private fun SettingsGroup(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = HopCardShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
-        Column(modifier = Modifier.padding(vertical = 4.dp)) {
-            content()
-        }
-    }
-}
-
-@Composable
-private fun SettingsRow(
-    icon: @Composable () -> Unit,
-    title: String,
-    body: String,
-) {
-    val scheme = MaterialTheme.colorScheme
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        icon()
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = scheme.onSurface,
-        )
-        Text(
-            text = body,
-            style = MaterialTheme.typography.bodyLarge,
-            color = scheme.onSurfaceVariant,
-        )
+        Column { content() }
     }
 }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,9 +27,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.flyme2mars.hop.R
-import com.flyme2mars.hop.ui.floor.HopCardShape
+import com.flyme2mars.hop.ui.theme.HopCardShape
+import com.flyme2mars.hop.ui.theme.HopTokens
 
 @Composable
 fun OnboardingScreen(
@@ -45,18 +46,18 @@ fun OnboardingScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = HopTokens.ScreenGutterWide, vertical = HopTokens.CardPadding),
         ) {
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(HopTokens.ListGap),
             ) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(HopTokens.ListGap))
                 Text(
                     text = stringResource(R.string.onboarding_title),
-                    style = MaterialTheme.typography.headlineLarge,
+                    style = MaterialTheme.typography.headlineSmall,
                     color = scheme.onSurface,
                 )
                 Text(
@@ -69,7 +70,7 @@ fun OnboardingScreen(
                     style = MaterialTheme.typography.bodyLarge,
                     color = scheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(HopTokens.Radius8))
                 OnboardingCard(
                     icon = Icons.Outlined.Apartment,
                     title = stringResource(R.string.onboarding_floor_title),
@@ -85,13 +86,14 @@ fun OnboardingScreen(
                     title = stringResource(R.string.onboarding_cut_title),
                     body = stringResource(R.string.onboarding_cut_body),
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(HopTokens.Radius8))
             }
             Button(
                 onClick = onGetStarted,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 12.dp, bottom = 8.dp),
+                    .padding(top = HopTokens.ListGap, bottom = HopTokens.Radius8)
+                    .heightIn(min = HopTokens.Touch),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = scheme.primary,
                     contentColor = scheme.onPrimary,
@@ -104,7 +106,7 @@ fun OnboardingScreen(
             }
             Text(
                 text = stringResource(R.string.onboarding_footnote),
-                modifier = Modifier.padding(bottom = 8.dp),
+                modifier = Modifier.padding(bottom = HopTokens.Radius8),
                 style = MaterialTheme.typography.labelMedium,
                 color = scheme.onSurfaceVariant,
             )
@@ -122,16 +124,16 @@ private fun OnboardingCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = HopCardShape,
-        color = scheme.surfaceContainerHigh,
+        color = scheme.surfaceContainer,
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(HopTokens.CardPadding),
+            verticalArrangement = Arrangement.spacedBy(HopTokens.Radius8),
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(HopTokens.SectionGap),
                 tint = scheme.onSurface,
             )
             Text(

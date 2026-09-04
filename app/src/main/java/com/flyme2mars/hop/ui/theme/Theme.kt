@@ -4,13 +4,18 @@ import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RippleConfiguration
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -77,6 +82,17 @@ private val MonoDarkColorScheme = darkColorScheme(
     inversePrimary = MonoDarkInversePrimary,
 )
 
+private fun ColorScheme.deepenEverydayDark(): ColorScheme = copy(
+    background = lerp(background, EverydayDarkFloor, 0.72f),
+    surface = lerp(surface, EverydayDarkFloor, 0.72f),
+    surfaceContainerLowest = lerp(surfaceContainerLowest, EverydayDarkFloor, 0.78f),
+    surfaceContainerLow = lerp(surfaceContainerLow, EverydayDarkContainerLow, 0.7f),
+    surfaceContainer = lerp(surfaceContainer, EverydayDarkContainer, 0.65f),
+    surfaceContainerHigh = lerp(surfaceContainerHigh, EverydayDarkContainerHigh, 0.6f),
+    surfaceContainerHighest = lerp(surfaceContainerHighest, EverydayDarkContainerHighest, 0.55f),
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HopTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -85,13 +101,14 @@ fun HopTheme(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
-    val colorScheme: ColorScheme = when {
+    val rawScheme: ColorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
         darkTheme -> MonoDarkColorScheme
         else -> MonoLightColorScheme
     }
+    val colorScheme = if (darkTheme) rawScheme.deepenEverydayDark() else rawScheme
 
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -107,6 +124,14 @@ fun HopTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        content = content,
-    )
+        shapes = HopShapes,
+    ) {
+        CompositionLocalProvider(
+            LocalRippleConfiguration provides RippleConfiguration(
+                color = colorScheme.primary.copy(alpha = HopTokens.RippleAlpha),
+            ),
+        ) {
+            content()
+        }
+    }
 }

@@ -3,8 +3,11 @@ package com.flyme2mars.hop
 import com.flyme2mars.hop.data.FakeHopRepository
 import com.flyme2mars.hop.data.PostFilter
 import com.flyme2mars.hop.data.PostKind
+import com.flyme2mars.hop.data.authorInitials
+import com.flyme2mars.hop.data.hasPrioritySheen
 import com.flyme2mars.hop.data.matches
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -24,13 +27,26 @@ class FakeHopRepositoryTest {
     @Test
     fun filters_partitionSeedBoard() {
         val posts = FakeHopRepository.seedPosts()
-        val requests = posts.filter { it.matches(PostFilter.Requests) }
+        val asks = posts.filter { it.matches(PostFilter.Asks) }
         val offers = posts.filter { it.matches(PostFilter.Offers) }
-        val alerts = posts.filter { it.matches(PostFilter.Alerts) }
-        assertEquals(posts.size, requests.size + offers.size + alerts.size)
-        assertTrue(requests.all { it.kind == PostKind.Request })
+        val notes = posts.filter { it.matches(PostFilter.Notes) }
+        assertEquals(posts.size, asks.size + offers.size + notes.size)
+        assertTrue(asks.all { it.kind == PostKind.Ask })
         assertTrue(offers.all { it.kind == PostKind.Offer })
-        assertTrue(alerts.all { it.kind == PostKind.Alert })
+        assertTrue(notes.all { it.kind == PostKind.Note })
+    }
+
+    @Test
+    fun sheen_onlyAskAndOffer() {
+        assertTrue(PostKind.Ask.hasPrioritySheen)
+        assertTrue(PostKind.Offer.hasPrioritySheen)
+        assertFalse(PostKind.Note.hasPrioritySheen)
+    }
+
+    @Test
+    fun authorInitials_twoNames() {
+        assertEquals("PK", authorInitials("Priya Kapoor"))
+        assertEquals("YO", authorInitials("You"))
     }
 
     @Test

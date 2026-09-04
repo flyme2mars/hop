@@ -19,7 +19,7 @@ object FakeHopRepository {
         ),
         HopPost(
             id = 2,
-            kind = PostKind.Request,
+            kind = PostKind.Ask,
             title = "USB-C charger for an hour?",
             body = "Phone is at 4%. Happy to sit in the lounge so you do not lose it.",
             author = "Dev",
@@ -28,7 +28,7 @@ object FakeHopRepository {
         ),
         HopPost(
             id = 3,
-            kind = PostKind.Alert,
+            kind = PostKind.Note,
             title = "Water on the 3rd stairwell",
             body = "Slow drip from the landing ceiling. Warden has been told; watch your step.",
             author = "Anika",
@@ -46,7 +46,7 @@ object FakeHopRepository {
         ),
         HopPost(
             id = 5,
-            kind = PostKind.Request,
+            kind = PostKind.Ask,
             title = "Lost keycard near laundry",
             body = "Blue sleeve, name Meera. If it turned up in a dryer, I owe you chai.",
             author = "Meera",
@@ -55,7 +55,7 @@ object FakeHopRepository {
         ),
         HopPost(
             id = 6,
-            kind = PostKind.Alert,
+            kind = PostKind.Note,
             title = "West wing power is back",
             body = "Lights and charging points on this side came up about ten minutes ago.",
             author = "Floor desk",
@@ -73,7 +73,7 @@ object FakeHopRepository {
         ),
         HopPost(
             id = 8,
-            kind = PostKind.Request,
+            kind = PostKind.Ask,
             title = "Quiet after 11 on this corridor?",
             body = "Exam in the morning. A nod is enough — no need to police anyone.",
             author = "Jules",
@@ -85,7 +85,7 @@ object FakeHopRepository {
     fun seedHistory(): List<HopPost> = listOf(
         HopPost(
             id = 101,
-            kind = PostKind.Request,
+            kind = PostKind.Ask,
             title = "Spare pillow",
             body = "Claimed last night. Returned to 214 this morning.",
             author = "Dev",
@@ -105,7 +105,7 @@ object FakeHopRepository {
         ),
         HopPost(
             id = 103,
-            kind = PostKind.Alert,
+            kind = PostKind.Note,
             title = "Generator test at 6",
             body = "Lights flickered twice, then held. Desk marked it closed.",
             author = "Floor desk",
