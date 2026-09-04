@@ -4,7 +4,7 @@ import com.flyme2mars.hop.data.FakeHopRepository
 import com.flyme2mars.hop.data.PostFilter
 import com.flyme2mars.hop.data.PostKind
 import com.flyme2mars.hop.data.authorInitials
-import com.flyme2mars.hop.data.hasPrioritySheen
+import com.flyme2mars.hop.data.hasLeadingEdge
 import com.flyme2mars.hop.data.matches
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -37,10 +37,10 @@ class FakeHopRepositoryTest {
     }
 
     @Test
-    fun sheen_onlyAskAndOffer() {
-        assertTrue(PostKind.Ask.hasPrioritySheen)
-        assertTrue(PostKind.Offer.hasPrioritySheen)
-        assertFalse(PostKind.Note.hasPrioritySheen)
+    fun leadingEdge_onlyAskAndOffer() {
+        assertTrue(PostKind.Ask.hasLeadingEdge)
+        assertTrue(PostKind.Offer.hasLeadingEdge)
+        assertFalse(PostKind.Note.hasLeadingEdge)
     }
 
     @Test

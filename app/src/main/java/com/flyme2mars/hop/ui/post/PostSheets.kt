@@ -1,31 +1,29 @@
 package com.flyme2mars.hop.ui.post
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,137 +31,158 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import com.flyme2mars.hop.R
 import com.flyme2mars.hop.data.FakeHopRepository
 import com.flyme2mars.hop.data.HopPost
 import com.flyme2mars.hop.data.PostKind
-import com.flyme2mars.hop.data.authorInitials
 import com.flyme2mars.hop.data.canClaim
-import com.flyme2mars.hop.ui.components.HopFilterChip
-import com.flyme2mars.hop.ui.floor.PostCard
-import com.flyme2mars.hop.ui.floor.icon
+import com.flyme2mars.hop.ui.components.HopSpecularButton
 import com.flyme2mars.hop.ui.floor.label
-import com.flyme2mars.hop.ui.theme.HopSheetShape
+import com.flyme2mars.hop.ui.theme.HopMotion
+import com.flyme2mars.hop.ui.theme.HopSharedKeys
 import com.flyme2mars.hop.ui.theme.HopTokens
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ComposePostSheet(
-    onDismiss: () -> Unit,
+fun ComposePostContent(
+    motion: HopMotion,
     onPublish: (PostKind, String, String) -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var kind by remember { mutableStateOf(PostKind.Ask) }
+    var kind by remember { mutableStateOf(PostKind.Offer) }
     var title by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
     val canPost = title.trim().isNotEmpty() && body.trim().isNotEmpty()
     val scheme = MaterialTheme.colorScheme
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = HopSheetShape,
-        containerColor = scheme.surfaceContainerLow,
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(HopTokens.ListGap),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = HopTokens.ScreenGutterWide)
-                .padding(bottom = HopTokens.SheetRadius)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(HopTokens.ListGap),
+        Text(
+            text = stringResource(R.string.post_sheet_title),
+            style = MaterialTheme.typography.titleLarge,
+            color = scheme.onSurface,
+        )
+        Text(
+            text = stringResource(R.string.post_sheet_subtitle),
+            style = MaterialTheme.typography.bodyLarge,
+            color = scheme.onSurfaceVariant,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(HopTokens.Radius8),
         ) {
-            Text(
-                text = stringResource(R.string.post_sheet_title),
-                style = MaterialTheme.typography.titleLarge,
-                color = scheme.onSurface,
-            )
-            Text(
-                text = stringResource(R.string.post_sheet_subtitle),
-                style = MaterialTheme.typography.bodyLarge,
-                color = scheme.onSurfaceVariant,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(HopTokens.Radius8)) {
-                PostKind.entries.forEach { option ->
-                    HopFilterChip(
-                        selected = kind == option,
-                        onClick = { kind = option },
-                        label = option.label(),
-                        icon = option.icon(),
+            PostKind.entries.forEach { option ->
+                val selected = kind == option
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = HopTokens.Touch)
+                        .clip(RoundedCornerShape(HopTokens.Radius12))
+                        .background(
+                            if (selected) scheme.surfaceContainerHigh else scheme.surfaceContainer,
+                        )
+                        .clickable(role = Role.Tab) { kind = option },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = option.label(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (selected) scheme.onSurface else scheme.onSurfaceVariant,
                     )
                 }
             }
-            HopSheetField(
-                value = title,
-                onValueChange = { title = it },
-                label = stringResource(R.string.post_field_title),
-            )
-            HopSheetField(
-                value = body,
-                onValueChange = { body = it },
-                label = stringResource(R.string.post_field_body),
-                minLines = 4,
-            )
-            Spacer(Modifier.height(HopTokens.Radius4))
-            Button(
-                onClick = { onPublish(kind, title, body) },
-                enabled = canPost,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = HopTokens.Touch),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = scheme.primary,
-                    contentColor = scheme.onPrimary,
-                ),
-            ) {
-                Text(
-                    text = stringResource(R.string.post_cta),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
         }
+        HopSheetField(
+            value = title,
+            onValueChange = { title = it },
+            label = stringResource(R.string.post_field_title),
+        )
+        HopSheetField(
+            value = body,
+            onValueChange = { body = it },
+            label = stringResource(R.string.post_field_body),
+            minLines = 4,
+        )
+        HopSpecularButton(
+            label = stringResource(R.string.post_cta),
+            onClick = { onPublish(kind, title, body) },
+            motion = motion,
+            enabled = canPost,
+        )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun PostDetailSheet(
+fun ColumnScope.ClaimPostContent(
     post: HopPost,
+    motion: HopMotion,
+    sharedScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     onDismiss: () -> Unit,
-    onClaim: () -> Unit,
+    onConfirm: () -> Unit,
     onRemove: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scheme = MaterialTheme.colorScheme
     val claimedByYou = post.claimedBy == FakeHopRepository.YouName
     var confirmRemove by remember { mutableStateOf(false) }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = HopSheetShape,
-        containerColor = scheme.surfaceContainerLow,
-    ) {
+    with(sharedScope) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = HopTokens.ScreenGutterWide)
-                .padding(bottom = HopTokens.SheetRadius),
-            verticalArrangement = Arrangement.spacedBy(HopTokens.CardPadding),
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(HopTokens.ListGap),
         ) {
             Text(
-                text = stringResource(R.string.post_detail_title),
+                text = stringResource(R.string.claim_sheet_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = scheme.onSurface,
             )
-            PostCard(post = post, onClick = {})
+            Text(
+                text = post.kind.label(),
+                modifier = Modifier.sharedElement(
+                    sharedContentState = rememberSharedContentState(HopSharedKeys.status(post.id)),
+                    animatedVisibilityScope = animatedVisibilityScope,
+                ),
+                style = MaterialTheme.typography.labelMedium,
+                color = scheme.onSurfaceVariant,
+            )
+            Text(
+                text = post.title,
+                modifier = Modifier.sharedElement(
+                    sharedContentState = rememberSharedContentState(HopSharedKeys.title(post.id)),
+                    animatedVisibilityScope = animatedVisibilityScope,
+                ),
+                style = MaterialTheme.typography.titleMedium,
+                color = scheme.onSurface,
+            )
+            Text(
+                text = post.body,
+                style = MaterialTheme.typography.bodyLarge,
+                color = scheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.post_meta, post.author, post.place),
+                modifier = Modifier.sharedElement(
+                    sharedContentState = rememberSharedContentState(HopSharedKeys.room(post.id)),
+                    animatedVisibilityScope = animatedVisibilityScope,
+                ),
+                style = MaterialTheme.typography.labelMedium,
+                color = scheme.onSurfaceVariant,
+            )
             if (post.canClaim()) {
+                Text(
+                    text = stringResource(R.string.claim_sheet_body, post.author),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = scheme.onSurfaceVariant,
+                )
                 Button(
-                    onClick = onClaim,
+                    onClick = onConfirm,
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = HopTokens.Touch),
@@ -173,7 +192,7 @@ fun PostDetailSheet(
                     ),
                 ) {
                     Text(
-                        text = stringResource(R.string.claim_cta_short),
+                        text = stringResource(R.string.claim_cta),
                         style = MaterialTheme.typography.labelLarge,
                     )
                 }
@@ -185,13 +204,13 @@ fun PostDetailSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = HopTokens.Touch),
-                    colors = ButtonDefaults.textButtonColors(contentColor = scheme.error),
                 ) {
                     Text(
                         text = stringResource(
                             if (confirmRemove) R.string.claim_remove_confirm else R.string.claim_remove,
                         ),
                         style = MaterialTheme.typography.labelLarge,
+                        color = scheme.error,
                     )
                 }
             } else {
@@ -203,105 +222,6 @@ fun PostDetailSheet(
                     },
                     style = MaterialTheme.typography.bodyLarge,
                     color = scheme.onSurfaceVariant,
-                )
-            }
-            OutlinedButton(
-                onClick = onDismiss,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = HopTokens.Touch),
-            ) {
-                Text(
-                    text = stringResource(R.string.claim_dismiss),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ClaimSheet(
-    post: HopPost,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scheme = MaterialTheme.colorScheme
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = HopSheetShape,
-        containerColor = scheme.surfaceContainerLow,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = HopTokens.ScreenGutterWide)
-                .padding(bottom = HopTokens.SheetRadius),
-            verticalArrangement = Arrangement.spacedBy(HopTokens.ListGap),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(HopTokens.ListGap),
-            ) {
-                Surface(
-                    modifier = Modifier.size(HopTokens.Avatar),
-                    shape = CircleShape,
-                    color = scheme.secondaryContainer,
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = authorInitials(post.author),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = scheme.onSecondaryContainer,
-                        )
-                    }
-                }
-                Column {
-                    Text(
-                        text = post.author,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = scheme.onSurface,
-                    )
-                    Text(
-                        text = post.place,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = scheme.onSurfaceVariant,
-                    )
-                }
-            }
-            Text(
-                text = stringResource(R.string.claim_sheet_title),
-                style = MaterialTheme.typography.titleLarge,
-                color = scheme.onSurface,
-            )
-            Text(
-                text = post.title,
-                style = MaterialTheme.typography.titleMedium,
-                color = scheme.onSurface,
-            )
-            Text(
-                text = stringResource(R.string.claim_sheet_body, post.author),
-                style = MaterialTheme.typography.bodyLarge,
-                color = scheme.onSurfaceVariant,
-            )
-            Button(
-                onClick = onConfirm,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = HopTokens.Touch),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = scheme.primary,
-                    contentColor = scheme.onPrimary,
-                ),
-            ) {
-                Text(
-                    text = stringResource(R.string.claim_cta),
-                    style = MaterialTheme.typography.labelLarge,
                 )
             }
             OutlinedButton(

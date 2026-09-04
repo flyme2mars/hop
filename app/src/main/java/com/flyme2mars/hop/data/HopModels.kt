@@ -6,13 +6,13 @@ enum class PostKind {
     Note,
 }
 
-val PostKind.hasPrioritySheen: Boolean
+val PostKind.hasLeadingEdge: Boolean
     get() = this == PostKind.Ask || this == PostKind.Offer
 
 enum class PostFilter {
     All,
-    Asks,
     Offers,
+    Asks,
     Notes,
 }
 

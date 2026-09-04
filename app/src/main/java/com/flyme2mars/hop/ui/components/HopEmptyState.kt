@@ -3,17 +3,17 @@ package com.flyme2mars.hop.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.flyme2mars.hop.ui.theme.HopCardShape
+import com.flyme2mars.hop.ui.theme.HopMotion
 import com.flyme2mars.hop.ui.theme.HopTokens
+import com.flyme2mars.hop.ui.theme.rememberHopMotion
 
 @Composable
 fun HopEmptyState(
@@ -22,15 +22,18 @@ fun HopEmptyState(
     cta: String,
     onCta: () -> Unit,
     modifier: Modifier = Modifier,
+    motion: HopMotion = rememberHopMotion(),
 ) {
     val scheme = MaterialTheme.colorScheme
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = HopCardShape,
         color = scheme.surfaceContainer,
+        shadowElevation = 0.dp,
+        tonalElevation = 0.dp,
     ) {
         Column(
-            modifier = Modifier.padding(HopTokens.CardPaddingWide),
+            modifier = Modifier.padding(HopTokens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(HopTokens.Radius8),
         ) {
             Text(
@@ -43,16 +46,11 @@ fun HopEmptyState(
                 style = MaterialTheme.typography.bodyLarge,
                 color = scheme.onSurfaceVariant,
             )
-            Button(
+            HopSpecularButton(
+                label = cta,
                 onClick = onCta,
-                modifier = Modifier.heightIn(min = HopTokens.Touch),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = scheme.primary,
-                    contentColor = scheme.onPrimary,
-                ),
-            ) {
-                Text(text = cta, style = MaterialTheme.typography.labelLarge)
-            }
+                motion = motion,
+            )
         }
     }
 }

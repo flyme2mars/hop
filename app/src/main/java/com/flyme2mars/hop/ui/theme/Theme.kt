@@ -15,81 +15,89 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val MonoLightColorScheme = lightColorScheme(
-    primary = MonoLightPrimary,
-    onPrimary = MonoLightOnPrimary,
-    primaryContainer = MonoLightPrimaryContainer,
-    onPrimaryContainer = MonoLightOnPrimaryContainer,
-    secondary = MonoLightSecondary,
-    onSecondary = MonoLightOnSecondary,
-    secondaryContainer = MonoLightSecondaryContainer,
-    onSecondaryContainer = MonoLightOnSecondaryContainer,
-    tertiary = MonoLightTertiary,
-    onTertiary = MonoLightOnTertiary,
-    tertiaryContainer = MonoLightTertiaryContainer,
-    onTertiaryContainer = MonoLightOnTertiaryContainer,
-    background = MonoLightBackground,
-    onBackground = MonoLightOnBackground,
-    surface = MonoLightSurface,
-    onSurface = MonoLightOnSurface,
-    surfaceVariant = MonoLightSurfaceVariant,
-    onSurfaceVariant = MonoLightOnSurfaceVariant,
-    surfaceContainerLowest = MonoLightSurfaceContainerLowest,
-    surfaceContainerLow = MonoLightSurfaceContainerLow,
-    surfaceContainer = MonoLightSurfaceContainer,
-    surfaceContainerHigh = MonoLightSurfaceContainerHigh,
-    surfaceContainerHighest = MonoLightSurfaceContainerHighest,
-    outline = MonoLightOutline,
-    outlineVariant = MonoLightOutlineVariant,
-    inverseSurface = MonoLightInverseSurface,
-    inverseOnSurface = MonoLightInverseOnSurface,
-    inversePrimary = MonoLightInversePrimary,
+private val InkDarkScheme = darkColorScheme(
+    primary = FallbackPrimaryDark,
+    onPrimary = FallbackOnPrimaryDark,
+    primaryContainer = InkDarkContainerHi,
+    onPrimaryContainer = InkDarkOn,
+    secondary = InkDarkMuted,
+    onSecondary = InkDarkBg,
+    secondaryContainer = InkDarkContainerHi,
+    onSecondaryContainer = InkDarkOn,
+    tertiary = InkDarkMuted,
+    onTertiary = InkDarkBg,
+    tertiaryContainer = InkDarkContainer,
+    onTertiaryContainer = InkDarkOn,
+    background = InkDarkBg,
+    onBackground = InkDarkOn,
+    surface = InkDarkSurface,
+    onSurface = InkDarkOn,
+    surfaceVariant = InkDarkContainer,
+    onSurfaceVariant = InkDarkMuted,
+    surfaceContainerLowest = InkDarkBg,
+    surfaceContainerLow = InkDarkSurface,
+    surfaceContainer = InkDarkContainer,
+    surfaceContainerHigh = InkDarkContainerHi,
+    surfaceContainerHighest = InkDarkContainerHi,
+    outline = InkDarkHairline,
+    outlineVariant = InkDarkHairline,
+    inverseSurface = InkLightSurface,
+    inverseOnSurface = InkLightOn,
+    inversePrimary = FallbackPrimaryLight,
+    scrim = Color.Black,
 )
 
-private val MonoDarkColorScheme = darkColorScheme(
-    primary = MonoDarkPrimary,
-    onPrimary = MonoDarkOnPrimary,
-    primaryContainer = MonoDarkPrimaryContainer,
-    onPrimaryContainer = MonoDarkOnPrimaryContainer,
-    secondary = MonoDarkSecondary,
-    onSecondary = MonoDarkOnSecondary,
-    secondaryContainer = MonoDarkSecondaryContainer,
-    onSecondaryContainer = MonoDarkOnSecondaryContainer,
-    tertiary = MonoDarkTertiary,
-    onTertiary = MonoDarkOnTertiary,
-    tertiaryContainer = MonoDarkTertiaryContainer,
-    onTertiaryContainer = MonoDarkOnTertiaryContainer,
-    background = MonoDarkBackground,
-    onBackground = MonoDarkOnBackground,
-    surface = MonoDarkSurface,
-    onSurface = MonoDarkOnSurface,
-    surfaceVariant = MonoDarkSurfaceVariant,
-    onSurfaceVariant = MonoDarkOnSurfaceVariant,
-    surfaceContainerLowest = MonoDarkSurfaceContainerLowest,
-    surfaceContainerLow = MonoDarkSurfaceContainerLow,
-    surfaceContainer = MonoDarkSurfaceContainer,
-    surfaceContainerHigh = MonoDarkSurfaceContainerHigh,
-    surfaceContainerHighest = MonoDarkSurfaceContainerHighest,
-    outline = MonoDarkOutline,
-    outlineVariant = MonoDarkOutlineVariant,
-    inverseSurface = MonoDarkInverseSurface,
-    inverseOnSurface = MonoDarkInverseOnSurface,
-    inversePrimary = MonoDarkInversePrimary,
+private val InkLightScheme = lightColorScheme(
+    primary = FallbackPrimaryLight,
+    onPrimary = FallbackOnPrimaryLight,
+    primaryContainer = InkLightContainerHi,
+    onPrimaryContainer = InkLightOn,
+    secondary = InkLightMuted,
+    onSecondary = InkLightSurface,
+    secondaryContainer = InkLightContainerHi,
+    onSecondaryContainer = InkLightOn,
+    tertiary = InkLightMuted,
+    onTertiary = InkLightSurface,
+    tertiaryContainer = InkLightContainer,
+    onTertiaryContainer = InkLightOn,
+    background = InkLightBg,
+    onBackground = InkLightOn,
+    surface = InkLightSurface,
+    onSurface = InkLightOn,
+    surfaceVariant = InkLightContainer,
+    onSurfaceVariant = InkLightMuted,
+    surfaceContainerLowest = InkLightSurface,
+    surfaceContainerLow = InkLightSurface,
+    surfaceContainer = InkLightContainer,
+    surfaceContainerHigh = InkLightContainerHi,
+    surfaceContainerHighest = InkLightContainerHi,
+    outline = InkLightHairline,
+    outlineVariant = InkLightHairline,
+    inverseSurface = InkDarkSurface,
+    inverseOnSurface = InkDarkOn,
+    inversePrimary = FallbackPrimaryDark,
+    scrim = InkDarkBg,
 )
 
-private fun ColorScheme.deepenEverydayDark(): ColorScheme = copy(
-    background = lerp(background, EverydayDarkFloor, 0.72f),
-    surface = lerp(surface, EverydayDarkFloor, 0.72f),
-    surfaceContainerLowest = lerp(surfaceContainerLowest, EverydayDarkFloor, 0.78f),
-    surfaceContainerLow = lerp(surfaceContainerLow, EverydayDarkContainerLow, 0.7f),
-    surfaceContainer = lerp(surfaceContainer, EverydayDarkContainer, 0.65f),
-    surfaceContainerHigh = lerp(surfaceContainerHigh, EverydayDarkContainerHigh, 0.6f),
-    surfaceContainerHighest = lerp(surfaceContainerHighest, EverydayDarkContainerHighest, 0.55f),
+/** Surfaces stay locked ink. Dynamic color may tint primary / secondary / tertiary only. */
+private fun ColorScheme.withLockedInk(base: ColorScheme): ColorScheme = base.copy(
+    primary = primary,
+    onPrimary = onPrimary,
+    primaryContainer = primaryContainer,
+    onPrimaryContainer = onPrimaryContainer,
+    secondary = secondary,
+    onSecondary = onSecondary,
+    secondaryContainer = secondaryContainer,
+    onSecondaryContainer = onSecondaryContainer,
+    tertiary = tertiary,
+    onTertiary = onTertiary,
+    tertiaryContainer = tertiaryContainer,
+    onTertiaryContainer = onTertiaryContainer,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -101,14 +109,13 @@ fun HopTheme(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
-    val rawScheme: ColorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> MonoDarkColorScheme
-        else -> MonoLightColorScheme
+    val ink = if (darkTheme) InkDarkScheme else InkLightScheme
+    val colorScheme = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val dynamic = if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        dynamic.withLockedInk(ink)
+    } else {
+        ink
     }
-    val colorScheme = if (darkTheme) rawScheme.deepenEverydayDark() else rawScheme
 
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -128,7 +135,7 @@ fun HopTheme(
     ) {
         CompositionLocalProvider(
             LocalRippleConfiguration provides RippleConfiguration(
-                color = colorScheme.primary.copy(alpha = HopTokens.RippleAlpha),
+                color = colorScheme.primary.copy(alpha = 0.12f),
             ),
         ) {
             content()

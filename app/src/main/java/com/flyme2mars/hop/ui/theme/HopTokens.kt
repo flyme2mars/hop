@@ -9,35 +9,38 @@ object HopTokens {
     val Radius8 = 8.dp
     val Radius12 = 12.dp
     val Radius16 = 16.dp
-    val CardRadius = 20.dp
+    val CardRadius = 24.dp
     val SheetRadius = 28.dp
+    val LeadingEdge = 3.dp
+    val FlameCapWidth = 48.dp
+    val FlameCapHeight = 2.dp
+    val FlameGlow = 32.dp
 
     val ScreenGutter = 16.dp
     val ScreenGutterWide = 20.dp
     val CardPadding = 16.dp
-    val CardPaddingWide = 20.dp
     val ListGap = 12.dp
     val SectionGap = 24.dp
     val Touch = 48.dp
-    val ChipMinHeight = 32.dp
     val Avatar = 40.dp
-    val SheenHeight = 48.dp
-    val FabHaloRadius = 72.dp
+    val CutSlide = 12.dp
 
-    const val RippleAlpha = 0.12f
-    const val SheenAlpha = 0.08f
-    const val ChipLuminousAlpha = 0.10f
-    const val FabHaloAlpha = 0.16f
+    const val ScrimDark = 0.55f
+    const val ScrimLight = 0.40f
+    const val VignetteDark = 0.15f
+    const val VignetteLight = 0.06f
+    const val SegmentBrushDark = 0.12f
+    const val SegmentBrushLight = 0.07f
+    const val SpecularDark = 0.10f
+    const val SpecularLight = 0.06f
+    const val FlameGlowAlpha = 0.25f
 
+    const val ReducedMs = 80
     const val MotionFast = 150
     const val MotionBase = 200
-    const val MotionSlow = 240
-    const val ChipSelectMs = 180
-    const val PressMs = 100
     const val CutEnterMs = 300
-    const val CutClockMs = 350
-    const val CandleMs = 2000
-    const val PressScale = 0.985f
+    const val FlameMs = 2400
+    const val FloorCutScale = 0.94f
     const val SpringDamping = 0.85f
 }
 

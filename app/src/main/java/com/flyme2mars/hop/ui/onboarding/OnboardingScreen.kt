@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -17,8 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Apartment
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Sensors
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -27,19 +24,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.flyme2mars.hop.R
+import com.flyme2mars.hop.ui.components.HopSpecularButton
 import com.flyme2mars.hop.ui.theme.HopCardShape
+import com.flyme2mars.hop.ui.theme.HopMotion
 import com.flyme2mars.hop.ui.theme.HopTokens
 
 @Composable
 fun OnboardingScreen(
-    onGetStarted: () -> Unit,
+    motion: HopMotion,
+    onJoin: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = scheme.surface,
+        color = scheme.background,
     ) {
         Column(
             modifier = Modifier
@@ -88,22 +89,12 @@ fun OnboardingScreen(
                 )
                 Spacer(Modifier.height(HopTokens.Radius8))
             }
-            Button(
-                onClick = onGetStarted,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = HopTokens.ListGap, bottom = HopTokens.Radius8)
-                    .heightIn(min = HopTokens.Touch),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = scheme.primary,
-                    contentColor = scheme.onPrimary,
-                ),
-            ) {
-                Text(
-                    text = stringResource(R.string.onboarding_cta),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
+            HopSpecularButton(
+                label = stringResource(R.string.onboarding_cta),
+                onClick = onJoin,
+                motion = motion,
+                modifier = Modifier.padding(top = HopTokens.ListGap, bottom = HopTokens.Radius8),
+            )
             Text(
                 text = stringResource(R.string.onboarding_footnote),
                 modifier = Modifier.padding(bottom = HopTokens.Radius8),
@@ -125,6 +116,8 @@ private fun OnboardingCard(
         modifier = Modifier.fillMaxWidth(),
         shape = HopCardShape,
         color = scheme.surfaceContainer,
+        shadowElevation = 0.dp,
+        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier.padding(HopTokens.CardPadding),

@@ -16,19 +16,10 @@ data class HopMotion(
     val reduced: Boolean,
 ) {
     fun <T> fade(): FiniteAnimationSpec<T> =
-        if (reduced) snap() else tween(HopTokens.MotionBase, easing = FastOutSlowInEasing)
+        if (reduced) tween(80) else tween(HopTokens.MotionBase, easing = FastOutSlowInEasing)
 
     fun <T> cutEnter(): FiniteAnimationSpec<T> =
-        if (reduced) snap() else tween(HopTokens.CutEnterMs, easing = FastOutSlowInEasing)
-
-    fun <T> clockFade(): FiniteAnimationSpec<T> =
-        if (reduced) snap() else tween(HopTokens.CutClockMs, easing = FastOutSlowInEasing)
-
-    fun <T> chipSelect(): FiniteAnimationSpec<T> =
-        if (reduced) snap() else tween(HopTokens.ChipSelectMs, easing = FastOutSlowInEasing)
-
-    fun <T> press(): FiniteAnimationSpec<T> =
-        if (reduced) snap() else tween(HopTokens.PressMs, easing = FastOutSlowInEasing)
+        if (reduced) tween(80) else tween(HopTokens.CutEnterMs, easing = FastOutSlowInEasing)
 
     fun <T> fabSpring(): FiniteAnimationSpec<T> =
         if (reduced) {
