@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Hop</string>
+    <string name="hello_hop">Hello Hop</string>
+    <string name="home_placeholder">Placeholder home. Mesh and Cut mode are not in this build.</string>
+</resources>
