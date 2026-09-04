@@ -2,14 +2,24 @@
 
 Offline-first hostel floor mesh for dead zones and power cuts (OffGrid).
 
-This repository currently contains an empty Kotlin + Jetpack Compose Android scaffold. Product features (BLE mesh, Cut mode, board) are not implemented yet.
+This repository contains a Kotlin + Jetpack Compose Android app. The current build is a **UI shell with fake floor posts** — Bluetooth, mesh protocol, and radio are not implemented.
+
+## What you can sideload
+
+Material You shell following the “Pixel floor, candle blackout” lock:
+
+- Everyday: dynamic color, system light/dark, mono fallback, primary on FAB/CTAs only
+- Floor board with 8 fake posts, filter chips, post sheet, claim sheet
+- Cut: true black, candle clock, **I’m OK** / **Need help**
+- History and Settings
+- Nearby shown as a quiet “n nearby” chip — not a banner
 
 ## Open in Android Studio
 
 1. Install [Android Studio](https://developer.android.com/studio) (current stable) with the Android SDK.
 2. **File → Open** and select this repository root (the folder that contains `settings.gradle.kts`).
 3. Let Gradle sync. Android Studio will write a local `local.properties` with `sdk.dir`.
-4. Run the `app` configuration on a device or emulator (`com.flyme2mars.hop`).
+4. Run the `app` configuration on a device (`com.flyme2mars.hop`).
 
 JDK 17+ is required. Android Studio’s bundled JDK is fine.
 
@@ -42,3 +52,9 @@ adb install -r app-debug.apk
 ```
 
 Debug builds are unsigned for Play Store use; they are meant for personal install and CI verification only.
+
+Onboarding is stored in app prefs. Clear Hop’s storage to see it again.
+
+## License
+
+MIT. See `LICENSE`.

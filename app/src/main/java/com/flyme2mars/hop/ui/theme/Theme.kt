@@ -1,53 +1,107 @@
 package com.flyme2mars.hop.ui.theme
 
+import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
-    primary = HopGreen,
-    onPrimary = HopInk,
-    secondary = HopGreenDim,
-    onSecondary = HopMist,
-    background = HopInk,
-    onBackground = HopMist,
-    surface = HopInk,
-    onSurface = HopMist,
-    onSurfaceVariant = Color(0xFFA8C0B4),
+private val MonoLightColorScheme = lightColorScheme(
+    primary = MonoLightPrimary,
+    onPrimary = MonoLightOnPrimary,
+    primaryContainer = MonoLightPrimaryContainer,
+    onPrimaryContainer = MonoLightOnPrimaryContainer,
+    secondary = MonoLightSecondary,
+    onSecondary = MonoLightOnSecondary,
+    secondaryContainer = MonoLightSecondaryContainer,
+    onSecondaryContainer = MonoLightOnSecondaryContainer,
+    tertiary = MonoLightTertiary,
+    onTertiary = MonoLightOnTertiary,
+    tertiaryContainer = MonoLightTertiaryContainer,
+    onTertiaryContainer = MonoLightOnTertiaryContainer,
+    background = MonoLightBackground,
+    onBackground = MonoLightOnBackground,
+    surface = MonoLightSurface,
+    onSurface = MonoLightOnSurface,
+    surfaceVariant = MonoLightSurfaceVariant,
+    onSurfaceVariant = MonoLightOnSurfaceVariant,
+    surfaceContainerLowest = MonoLightSurfaceContainerLowest,
+    surfaceContainerLow = MonoLightSurfaceContainerLow,
+    surfaceContainer = MonoLightSurfaceContainer,
+    surfaceContainerHigh = MonoLightSurfaceContainerHigh,
+    surfaceContainerHighest = MonoLightSurfaceContainerHighest,
+    outline = MonoLightOutline,
+    outlineVariant = MonoLightOutlineVariant,
+    inverseSurface = MonoLightInverseSurface,
+    inverseOnSurface = MonoLightInverseOnSurface,
+    inversePrimary = MonoLightInversePrimary,
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = HopGreenDim,
-    onPrimary = Color.White,
-    secondary = HopGreen,
-    onSecondary = HopInk,
-    background = HopSand,
-    onBackground = HopInk,
-    surface = HopSand,
-    onSurface = HopInk,
-    onSurfaceVariant = Color(0xFF3D5349),
+private val MonoDarkColorScheme = darkColorScheme(
+    primary = MonoDarkPrimary,
+    onPrimary = MonoDarkOnPrimary,
+    primaryContainer = MonoDarkPrimaryContainer,
+    onPrimaryContainer = MonoDarkOnPrimaryContainer,
+    secondary = MonoDarkSecondary,
+    onSecondary = MonoDarkOnSecondary,
+    secondaryContainer = MonoDarkSecondaryContainer,
+    onSecondaryContainer = MonoDarkOnSecondaryContainer,
+    tertiary = MonoDarkTertiary,
+    onTertiary = MonoDarkOnTertiary,
+    tertiaryContainer = MonoDarkTertiaryContainer,
+    onTertiaryContainer = MonoDarkOnTertiaryContainer,
+    background = MonoDarkBackground,
+    onBackground = MonoDarkOnBackground,
+    surface = MonoDarkSurface,
+    onSurface = MonoDarkOnSurface,
+    surfaceVariant = MonoDarkSurfaceVariant,
+    onSurfaceVariant = MonoDarkOnSurfaceVariant,
+    surfaceContainerLowest = MonoDarkSurfaceContainerLowest,
+    surfaceContainerLow = MonoDarkSurfaceContainerLow,
+    surfaceContainer = MonoDarkSurfaceContainer,
+    surfaceContainerHigh = MonoDarkSurfaceContainerHigh,
+    surfaceContainerHighest = MonoDarkSurfaceContainerHighest,
+    outline = MonoDarkOutline,
+    outlineVariant = MonoDarkOutlineVariant,
+    inverseSurface = MonoDarkInverseSurface,
+    inverseOnSurface = MonoDarkInverseOnSurface,
+    inversePrimary = MonoDarkInversePrimary,
 )
 
 @Composable
 fun HopTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
+    cutMode: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = when {
+    val context = LocalContext.current
+    val colorScheme: ColorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        darkTheme -> MonoDarkColorScheme
+        else -> MonoLightColorScheme
+    }
+
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            val controller = WindowCompat.getInsetsController(window, view)
+            val lightIcons = if (cutMode) false else !darkTheme
+            controller.isAppearanceLightStatusBars = lightIcons
+            controller.isAppearanceLightNavigationBars = lightIcons
+        }
     }
 
     MaterialTheme(
