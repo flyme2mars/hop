@@ -35,7 +35,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.flyme2mars.hop.R
 import com.flyme2mars.hop.data.formatElapsed
 import com.flyme2mars.hop.ui.theme.HopDimens
 import com.flyme2mars.hop.ui.theme.HopTheme
@@ -98,7 +100,7 @@ fun BlackoutScreen(
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = "power cut",
+                text = stringResource(R.string.blackout_label),
                 style = MaterialTheme.typography.bodyLarge,
                 color = colors.blackoutAccent.copy(alpha = 0.78f),
             )

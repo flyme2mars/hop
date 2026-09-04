@@ -31,7 +31,7 @@ class HopViewModel(application: Application) : AndroidViewModel(application) {
 
     val nearbyCount: Int get() = repository.nearbyCount()
 
-    fun setFilter(value: PostFilter) {
+    fun updateFilter(value: PostFilter) {
         filter = value
         refresh()
     }
@@ -49,7 +49,7 @@ class HopViewModel(application: Application) : AndroidViewModel(application) {
         preferences.saveProfile(next, onboarded = onboarded)
     }
 
-    fun setKeepScreenOn(enabled: Boolean) {
+    fun updateKeepScreenOn(enabled: Boolean) {
         keepScreenOn = enabled
         preferences.saveKeepScreenOn(enabled)
     }

@@ -1,6 +1,7 @@
 package com.flyme2mars.hop.data
 
 import android.content.Context
+import androidx.core.content.edit
 
 class HopPreferences(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -16,16 +17,16 @@ class HopPreferences(context: Context) {
     )
 
     fun saveProfile(profile: HopProfile, onboarded: Boolean = true) {
-        prefs.edit()
-            .putString(KEY_NAME, profile.name.trim())
-            .putString(KEY_ROOM, profile.room.trim())
-            .putString(KEY_FLOOR, profile.floor.trim())
-            .putBoolean(KEY_ONBOARDED, onboarded)
-            .apply()
+        prefs.edit {
+            putString(KEY_NAME, profile.name.trim())
+            putString(KEY_ROOM, profile.room.trim())
+            putString(KEY_FLOOR, profile.floor.trim())
+            putBoolean(KEY_ONBOARDED, onboarded)
+        }
     }
 
     fun saveKeepScreenOn(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_KEEP_SCREEN_ON, enabled).apply()
+        prefs.edit { putBoolean(KEY_KEEP_SCREEN_ON, enabled) }
     }
 
     companion object {

@@ -1,7 +1,7 @@
 package com.flyme2mars.hop
 
-import android.app.Activity
 import android.view.WindowManager
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -25,7 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
@@ -51,7 +50,7 @@ fun HopApp(viewModel: HopViewModel = viewModel()) {
     val start = if (viewModel.onboarded) HomeRoute else LaunchRoute
     val backStack = remember { mutableStateListOf<HopRoute>(start) }
     val current = backStack.lastOrNull() ?: LaunchRoute
-    val activity = LocalContext.current as? Activity
+    val activity = LocalActivity.current
     val holdScreen = current is BlackoutRoute && viewModel.keepScreenOn
 
     DisposableEffect(holdScreen, activity) {
@@ -111,8 +110,6 @@ fun HopApp(viewModel: HopViewModel = viewModel()) {
                         },
                     )
                 }
-
-                else -> NavEntry(key) { }
             }
         },
     )
@@ -176,7 +173,7 @@ private fun HomeShell(
                             nearbyCount = viewModel.nearbyCount,
                             filter = viewModel.filter,
                             posts = viewModel.floorPosts,
-                            onFilter = viewModel::setFilter,
+                            onFilter = viewModel::updateFilter,
                             onOpenPost = { post ->
                                 openedFromHistory = false
                                 openedPostId = post.id
@@ -203,7 +200,7 @@ private fun HomeShell(
                             profile = viewModel.profile,
                             keepScreenOn = viewModel.keepScreenOn,
                             onSaveProfile = viewModel::updateProfile,
-                            onKeepScreenOnChange = viewModel::setKeepScreenOn,
+                            onKeepScreenOnChange = viewModel::updateKeepScreenOn,
                             contentPadding = innerPadding,
                         )
                     }

@@ -35,8 +35,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.flyme2mars.hop.R
 import com.flyme2mars.hop.data.HopProfile
 import com.flyme2mars.hop.ui.components.HopFieldSpacer
 import com.flyme2mars.hop.ui.components.HopRaisedField
@@ -96,7 +98,7 @@ fun LaunchScreen(
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Your floor, offline.",
+                text = stringResource(R.string.launch_tagline),
                 style = MaterialTheme.typography.bodyLarge,
                 color = colors.textSecondary,
             )
