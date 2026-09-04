@@ -52,11 +52,8 @@
     <string name="claim_cta">Claim it</string>
 
     <string name="cut_title">Cut</string>
-    <string name="cut_nearby">%d nearby</string>
     <string name="cut_ok">I\'m OK</string>
     <string name="cut_help">Need help</string>
-    <string name="cut_sent_ok">I\'m OK — noted for %d nearby.</string>
-    <string name="cut_sent_help">Need help — noted for %d nearby.</string>
     <string name="cd_leave_cut">Leave Cut</string>
 
     <string name="history_title">History</string>
@@ -76,5 +73,17 @@
     <plurals name="nearby_count">
         <item quantity="one">%d nearby</item>
         <item quantity="other">%d nearby</item>
+    </plurals>
+    <plurals name="cut_nearby">
+        <item quantity="one">%d nearby</item>
+        <item quantity="other">%d nearby</item>
+    </plurals>
+    <plurals name="cut_sent_ok">
+        <item quantity="one">I\'m OK — noted for %d nearby.</item>
+        <item quantity="other">I\'m OK — noted for %d nearby.</item>
+    </plurals>
+    <plurals name="cut_sent_help">
+        <item quantity="one">Need help — noted for %d nearby.</item>
+        <item quantity="other">Need help — noted for %d nearby.</item>
     </plurals>
 </resources>

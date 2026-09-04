@@ -2,6 +2,7 @@ package com.flyme2mars.hop
 
 import android.content.Context
 import androidx.compose.runtime.getValue
+import androidx.core.content.edit
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -50,7 +51,7 @@ class HopAppState(context: Context) {
     private var nextId by mutableLongStateOf(200L)
 
     fun completeOnboarding() {
-        prefs.edit().putBoolean(KEY_ONBOARDED, true).apply()
+        prefs.edit { putBoolean(KEY_ONBOARDED, true) }
         route = HopRoute.Home
         tab = HomeTab.Floor
     }

@@ -45,6 +45,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -183,7 +184,7 @@ fun CutScreen(
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    text = stringResource(R.string.cut_nearby, nearbyCount),
+                    text = pluralStringResource(R.plurals.cut_nearby, nearbyCount, nearbyCount),
                     style = MaterialTheme.typography.labelMedium,
                     color = CutOnBlackMuted,
                     textAlign = TextAlign.Center,
@@ -195,8 +196,10 @@ fun CutScreen(
             if (status != null) {
                 Text(
                     text = when (status) {
-                        HopAppState.CUT_HELP -> stringResource(R.string.cut_sent_help, nearbyCount)
-                        else -> stringResource(R.string.cut_sent_ok, nearbyCount)
+                        HopAppState.CUT_HELP ->
+                            pluralStringResource(R.plurals.cut_sent_help, nearbyCount, nearbyCount)
+                        else ->
+                            pluralStringResource(R.plurals.cut_sent_ok, nearbyCount, nearbyCount)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
