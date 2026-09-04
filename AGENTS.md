@@ -16,3 +16,7 @@ Offline-first hostel floor mesh for dead zones and power cuts (OffGrid). Scaffol
 - No arena, swarm, or orch TSV.
 - One writer per branch. Do not pile onto someone else’s PR.
 - No `gt`, rebase, or force-push.
+
+## Android / Compose / UI
+
+When doing Android, Compose, or Hop UI work, follow project skills in `.agents/skills/` (official [android/skills](https://github.com/android/skills) pack plus design skills). Prefer `jetpack-compose-m3`, `styles`, `navigation-3`, `testing-setup`, `edge-to-edge`, `adaptive`, `android-cli`, and `base` when those folders exist; also use `sleek-design-mobile-apps`, `emil-design-eng`, `impeccable` (polish, critique, delight, quieter, distill, bolder), `frontend-design`, `design-taste-frontend`, and `ui-ux-pro-max`. Do not require SharedTransition morph experiments. The current android/skills snapshot has no `jetpack-compose-m3` or `base` folder; Wear Material 3 is `wear-compose-m3`.
