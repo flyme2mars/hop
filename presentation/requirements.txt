@@ -1,0 +1,5 @@
+python-pptx>=1.0.0
+Pillow>=10.0.0
+fonttools>=4.0.0
+lxml>=5.0.0
+reportlab>=4.0.0
