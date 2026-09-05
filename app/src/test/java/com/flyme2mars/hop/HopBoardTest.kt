@@ -4,6 +4,7 @@ import com.flyme2mars.hop.data.HopProfile
 import com.flyme2mars.hop.data.HopSyncCodec
 import com.flyme2mars.hop.data.InMemoryHopRepository
 import com.flyme2mars.hop.data.NearbyAvailability
+import com.flyme2mars.hop.data.NearbyPeer
 import com.flyme2mars.hop.data.NearbyState
 import com.flyme2mars.hop.data.PostFilter
 import com.flyme2mars.hop.data.PostKind
@@ -119,13 +120,29 @@ class HopBoardTest {
 
     @Test
     fun floor_subtitle_is_honest() {
-        assertEquals(
-            "209 · Leah · 2 nearby",
-            buildFloorSubtitle(profile, NearbyState(count = 2, availability = NearbyAvailability.Ready)),
+        val twoPeers = NearbyState(
+            peers = listOf(
+                NearbyPeer("aa1111", "Priya", "204"),
+                NearbyPeer("bb2222", "Dev", "101"),
+            ),
+            availability = NearbyAvailability.Ready,
         )
+        assertEquals("209 · Leah · 2 nearby", buildFloorSubtitle(profile, twoPeers))
+        assertEquals(2, twoPeers.count)
+        assertEquals(listOf("Priya · 204", "Dev · 101"), twoPeers.peers.map { it.label() })
         assertEquals(
             "209 · Leah · searching",
-            buildFloorSubtitle(profile, NearbyState(count = 0, availability = NearbyAvailability.Ready)),
+            buildFloorSubtitle(
+                profile,
+                NearbyState(availability = NearbyAvailability.Ready, searching = true),
+            ),
+        )
+        assertEquals(
+            "209 · Leah · Nobody nearby",
+            buildFloorSubtitle(
+                profile,
+                NearbyState(availability = NearbyAvailability.Ready, searching = false),
+            ),
         )
         assertEquals(
             "209 · Leah · needs Bluetooth",
@@ -186,11 +203,13 @@ class HopBoardTest {
         assertEquals(1, tracker.count())
         now = 46_100L
         assertEquals(0, tracker.count())
+        assertTrue(tracker.peers().isEmpty())
     }
 
     @Test
     fun ble_payload_matches_same_floor_only() {
         val payload = HopBleIds.presencePayload(floor = "2", selfId = "me-1")
+        assertEquals(HopBleIds.PAYLOAD_SIZE, payload.size)
         assertTrue(HopBleIds.sameFloor(payload, "2"))
         assertTrue(HopBleIds.sameFloor(payload, " 2 "))
         assertFalse(HopBleIds.sameFloor(payload, "3"))

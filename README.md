@@ -9,7 +9,7 @@ No accounts. No internet required for core use.
 - **Persistence:** Room for posts and claim state. DataStore for name, room, floor, keep-screen-on, a stable self id, and blackout session. First launch seeds the demo posts once; after that the board is real local data and survives restart.
 - **History:** Claimed posts from Room.
 - **Blackout:** Timer starts on enter. I’m OK / Need help stay for that session and survive process death. Keep-screen-on from Settings is honored. Exit fades back to Floor.
-- **Nearby (1-hop BLE):** Advertise + scan for Hop peers on the same floor name. Stable peer ids (not rotating MACs). Honest status: searching / N nearby / needs Bluetooth / needs permission. One-tap Allow nearby and Turn on Bluetooth. Two-way chunked GATT exchange of the full board (create / update / claim, newest `updatedAt` wins). Periodic resync while Floor is open. Not a multi-hop mesh. Nearby works in the foreground; Android may stop BLE in the background.
+- **Nearby (1-hop BLE):** Advertise + scan for Hop peers on the same floor name. Stable peer ids (not rotating MACs). Floor always shows a peer list: `name · room` once known, or **Phone nearby** plus a short id. Alone is **searching** / **Nobody nearby** with an empty list — never a naked count. One-tap Allow nearby and Turn on Bluetooth. Two-way chunked GATT exchange of the full board (create / update / claim, newest `updatedAt` wins). Periodic resync while Floor is open. Not a multi-hop mesh. Nearby works in the foreground; Android may stop BLE in the background.
 - **Settings:** Edit name / room / floor (persisted), About Hop, offline help, background BLE limit, version.
 
 ## Open in Android Studio
@@ -62,7 +62,7 @@ Need two Android phones. No internet. Same Hop APK (`hop-debug`).
 1. Sideload Hop on both phones and keep both **on Floor** (app open, screen on).
 2. On each phone, enter a **name**, **room**, and the **same Floor** (example: `2`). Tap Continue / Save.
 3. Grant nearby Bluetooth when asked (location only on Android 11 and older). If the subtitle says **needs Bluetooth**, tap **Turn on Bluetooth**.
-4. Hold the phones a few meters apart. Within about 15 seconds the subtitle should show **1 nearby** on each — never a made-up number. A third Hop phone on that floor should make it **2 nearby**. A phone on a different floor name must not count.
+4. Hold the phones a few meters apart. Within about 15 seconds each Floor should list the other phone — **Name · Room** after GATT, or **Phone nearby** plus a short id before the name arrives. The subtitle may say **1 nearby** only when that row is visible. Alone must stay **searching** / **Nobody nearby** with an empty list, never a phantom **2 nearby**. A third Hop phone on that floor adds a second named row. A phone on a different floor name must not appear.
 5. On phone A, create an Offer (title + body) and wait up to ~15 seconds. The same post should appear on phone B’s Floor without internet.
 6. On phone B, Claim that offer. On phone A it should move to History after the next sync.
 7. Force-stop Hop on phone A and reopen. The local post and claim state are still there (Room). Nearby starts again only while the app is open.

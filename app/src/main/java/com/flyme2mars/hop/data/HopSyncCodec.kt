@@ -7,8 +7,21 @@ object HopSyncCodec {
     private const val TITLE_MAX = 160
     private const val BODY_MAX = 2_000
 
-    fun encode(posts: List<HopPost>, limitBytes: Int = MAX_BYTES): ByteArray {
+    fun encode(
+        posts: List<HopPost>,
+        limitBytes: Int = MAX_BYTES,
+        selfId: String = "",
+        profile: HopProfile? = null,
+    ): ByteArray {
         val lines = mutableListOf(MAGIC_V2)
+        if (selfId.isNotBlank() && profile != null) {
+            lines += listOf(
+                "ME",
+                escape(selfId),
+                escape(clip(profile.name, 48)),
+                escape(clip(profile.room, 24)),
+            ).joinToString("|")
+        }
         val newest = posts.sortedByDescending { it.updatedAtMillis }
         for (post in newest) {
             val line = listOf(
@@ -38,7 +51,27 @@ object HopSyncCodec {
         val magic = lines.first()
         if (magic != MAGIC_V2 && magic != MAGIC_V1) return emptyList()
         val version2 = magic == MAGIC_V2
-        return lines.drop(1).mapNotNull { line -> parseLine(line, version2) }
+        return lines.drop(1).mapNotNull { line ->
+            if (line.startsWith("ME|")) null else parseLine(line, version2)
+        }
+    }
+
+    fun decodeMe(bytes: ByteArray): NearbyPeer? {
+        if (bytes.isEmpty()) return null
+        val line = bytes.toString(Charsets.UTF_8)
+            .split('\n')
+            .map { it.trim() }
+            .firstOrNull { it.startsWith("ME|") }
+            ?: return null
+        val parts = splitEscaped(line)
+        if (parts.size < 4 || parts[0] != "ME") return null
+        val selfId = parts[1].trim()
+        if (selfId.isBlank()) return null
+        return NearbyPeer(
+            id = selfId,
+            name = parts[2].trim(),
+            room = parts[3].trim(),
+        )
     }
 
     private fun parseLine(line: String, version2: Boolean): HopPost? {

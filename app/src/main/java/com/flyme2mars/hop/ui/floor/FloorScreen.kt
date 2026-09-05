@@ -1,6 +1,7 @@
 package com.flyme2mars.hop.ui.floor
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.flyme2mars.hop.R
 import com.flyme2mars.hop.data.HopPost
 import com.flyme2mars.hop.data.HopProfile
+import com.flyme2mars.hop.data.NearbyAvailability
 import com.flyme2mars.hop.data.NearbyState
 import com.flyme2mars.hop.data.PostFilter
 import com.flyme2mars.hop.data.PostKind
@@ -66,63 +68,87 @@ fun FloorScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "Floor ${profile.floor.ifBlank { "?" }}",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = colors.textPrimary,
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(
-                    onClick = onBlackout,
-                    modifier = Modifier.size(HopDimens.Touch),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Bolt,
-                        contentDescription = "Blackout",
-                        tint = colors.textPrimary,
-                    )
-                }
-            }
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = colors.textSecondary,
-            )
-            if (nearby.needsPermission) {
-                TextButton(
-                    onClick = onRequestNearby,
-                    modifier = Modifier.heightIn(min = HopDimens.Touch),
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = stringResource(R.string.nearby_allow),
-                        color = colors.accent,
-                        style = MaterialTheme.typography.labelLarge,
+                        text = "Floor ${profile.floor.ifBlank { "?" }}",
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = colors.textPrimary,
+                        modifier = Modifier.weight(1f),
                     )
+                    IconButton(
+                        onClick = onBlackout,
+                        modifier = Modifier.size(HopDimens.Touch),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Bolt,
+                            contentDescription = "Blackout",
+                            tint = colors.textPrimary,
+                        )
+                    }
                 }
                 Text(
-                    text = stringResource(R.string.nearby_rationale),
+                    text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
                     color = colors.textSecondary,
                 )
-            } else if (nearby.needsBluetooth) {
-                TextButton(
-                    onClick = onEnableBluetooth,
-                    modifier = Modifier.heightIn(min = HopDimens.Touch),
-                ) {
-                    Text(
-                        text = stringResource(R.string.nearby_enable_bluetooth),
-                        color = colors.accent,
-                        style = MaterialTheme.typography.labelLarge,
-                    )
+                if (nearby.availability == NearbyAvailability.Ready) {
+                    Spacer(Modifier.height(8.dp))
+                    if (nearby.peers.isEmpty()) {
+                        Text(
+                            text = "Nobody nearby",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = colors.textSecondary,
+                        )
+                    } else {
+                        nearby.peers.forEach { peer ->
+                            Text(
+                                text = peer.label(),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = if (peer.name.isNotBlank()) {
+                                    colors.textPrimary
+                                } else {
+                                    colors.textSecondary
+                                },
+                            )
+                        }
+                    }
                 }
+                if (nearby.needsPermission) {
+                    TextButton(
+                        onClick = onRequestNearby,
+                        modifier = Modifier.heightIn(min = HopDimens.Touch),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.nearby_allow),
+                            color = colors.accent,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.nearby_rationale),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colors.textSecondary,
+                    )
+                } else if (nearby.needsBluetooth) {
+                    TextButton(
+                        onClick = onEnableBluetooth,
+                        modifier = Modifier.heightIn(min = HopDimens.Touch),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.nearby_enable_bluetooth),
+                            color = colors.accent,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                HopFilterChips(selected = filter, onSelect = onFilter)
             }
-            Spacer(Modifier.height(16.dp))
-            HopFilterChips(selected = filter, onSelect = onFilter)
         }
         if (posts.isEmpty()) {
             item {

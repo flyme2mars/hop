@@ -29,9 +29,12 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.ParcelUuid
+import android.util.Log
 import com.flyme2mars.hop.data.HopPost
+import com.flyme2mars.hop.data.HopProfile
 import com.flyme2mars.hop.data.HopSyncCodec
 import com.flyme2mars.hop.data.NearbyAvailability
+import com.flyme2mars.hop.data.NearbyPeer
 import com.flyme2mars.hop.data.NearbyState
 import java.util.ArrayDeque
 import java.util.UUID
@@ -51,6 +54,7 @@ class HopNearbyController(
     private val scope: CoroutineScope,
     private val floorProvider: () -> String,
     private val selfIdProvider: () -> String,
+    private val profileProvider: () -> HopProfile,
     private val snapshotProvider: suspend () -> List<HopPost>,
     private val ingestRemote: suspend (List<HopPost>) -> Unit,
 ) {
@@ -80,8 +84,9 @@ class HopNearbyController(
     private var outboundChunks: List<ByteArray> = emptyList()
     private var outboundIndex = 0
     private var receiverRegistered = false
-    private var lastPublishedCount = -1
+    private var lastPublishedPeers: List<NearbyPeer> = emptyList()
     private var lastPublishedAvailability: NearbyAvailability? = null
+    private var lastPublishedSearching: Boolean? = null
     private var writeOwnAfterRead = false
 
     private val bluetoothReceiver = object : BroadcastReceiver() {
@@ -142,6 +147,9 @@ class HopNearbyController(
         stopRadioLocked()
         unregisterReceiver()
         pending.clear()
+        tracker.clear()
+        devicesByPeer.clear()
+        lastSyncAt.clear()
         publish(force = true)
     }
 
@@ -160,13 +168,23 @@ class HopNearbyController(
     }
 
     fun onFloorChanged() {
+        tracker.clear()
+        devicesByPeer.clear()
+        lastSyncAt.clear()
         if (started.get() && canUseRadio()) {
             startAdvertising(adapter() ?: return)
         }
+        publish(force = true)
     }
 
     private suspend fun refreshSnapshot() {
-        snapshotBytes = runCatching { HopSyncCodec.encode(snapshotProvider()) }.getOrDefault(ByteArray(0))
+        snapshotBytes = runCatching {
+            HopSyncCodec.encode(
+                posts = snapshotProvider(),
+                selfId = selfIdProvider(),
+                profile = profileProvider(),
+            )
+        }.getOrDefault(ByteArray(0))
     }
 
     private fun canUseRadio(): Boolean =
@@ -185,11 +203,20 @@ class HopNearbyController(
 
     private fun publish(force: Boolean = false) {
         val availability = currentAvailability()
-        val count = if (availability == NearbyAvailability.Ready) tracker.count() else 0
-        if (!force && count == lastPublishedCount && availability == lastPublishedAvailability) return
-        lastPublishedCount = count
+        val peers = if (availability == NearbyAvailability.Ready && started.get()) tracker.peers() else emptyList()
+        val searching = availability == NearbyAvailability.Ready && started.get() && peers.isEmpty()
+        if (
+            !force &&
+            peers == lastPublishedPeers &&
+            availability == lastPublishedAvailability &&
+            searching == lastPublishedSearching
+        ) {
+            return
+        }
+        lastPublishedPeers = peers
         lastPublishedAvailability = availability
-        _state.value = NearbyState(count = count, availability = availability)
+        lastPublishedSearching = searching
+        _state.value = NearbyState(peers = peers, availability = availability, searching = searching)
     }
 
     private fun hasBleFeature(): Boolean =
@@ -234,13 +261,20 @@ class HopNearbyController(
             .setConnectable(true)
             .setTimeout(0)
             .build()
-        val data = AdvertiseData.Builder()
+        // Legacy 31-byte advertise cannot hold a 128-bit UUID and a 12-byte
+        // identity payload together. UUID stays in the primary packet; identity
+        // goes in the scan response so receivers only mark a full valid payload.
+        val advertiseData = AdvertiseData.Builder()
             .addServiceUuid(ParcelUuid(HopBleIds.SERVICE_UUID))
+            .setIncludeDeviceName(false)
+            .setIncludeTxPowerLevel(false)
+            .build()
+        val scanResponse = AdvertiseData.Builder()
             .addServiceData(ParcelUuid(HopBleIds.SERVICE_UUID), payload)
             .setIncludeDeviceName(false)
             .setIncludeTxPowerLevel(false)
             .build()
-        runCatching { next.startAdvertising(settings, data, advertiseCallback) }
+        runCatching { next.startAdvertising(settings, advertiseData, scanResponse, advertiseCallback) }
     }
 
     @SuppressLint("MissingPermission")
@@ -293,15 +327,30 @@ class HopNearbyController(
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
             result ?: return
+            val device = result.device ?: return
             val payload = result.scanRecord?.getServiceData(ParcelUuid(HopBleIds.SERVICE_UUID))
             val floor = floorProvider()
             val selfId = selfIdProvider()
-            if (!HopBleIds.sameFloor(payload, floor)) return
-            if (HopBleIds.isSelf(payload, selfId)) return
-            val peerId = HopBleIds.peerId(payload) ?: return
-            val device = result.device ?: return
+            if (isOwnAdapter(device)) {
+                Log.d(TAG, "drop ${device.address}: adapter self MAC")
+                return
+            }
+            val evaluation = HopBleIds.evaluate(payload, floor, selfId)
+            if (!evaluation.accepted) {
+                Log.d(TAG, "drop ${device.address}: ${evaluation.reason}")
+                return
+            }
+            val peerId = evaluation.peerId
             devicesByPeer[peerId] = device
             val added = tracker.mark(peerId)
+            Log.d(
+                TAG,
+                if (added) {
+                    "add peer $peerId from ${device.address}: ${evaluation.reason}"
+                } else {
+                    "refresh peer $peerId from ${device.address}"
+                },
+            )
             if (added) publish()
             enqueue(device, peerId)
             drainQueue()
@@ -630,9 +679,28 @@ class HopNearbyController(
         val payload = bytes ?: return
         val framed = inboundAssembler.add(payload)
         val body = framed ?: payload
+        applyRemoteProfile(body)
         val posts = HopSyncCodec.decode(body)
         if (posts.isEmpty()) return
         scope.launch { runCatching { ingestRemote(posts) } }
+    }
+
+    private fun applyRemoteProfile(body: ByteArray) {
+        val me = HopSyncCodec.decodeMe(body) ?: return
+        if (me.id == selfIdProvider() || HopBleIds.peerIdFromSelfId(me.id) == HopBleIds.peerIdFromSelfId(selfIdProvider())) {
+            Log.d(TAG, "drop ME profile: own selfId")
+            return
+        }
+        val peerId = HopBleIds.peerIdFromSelfId(me.id)
+        val changed = tracker.updateIdentity(peerId, me.name, me.room)
+        Log.d(TAG, "identity $peerId name=${me.name} room=${me.room} changed=$changed")
+        if (changed) publish()
+    }
+
+    private fun isOwnAdapter(device: BluetoothDevice): Boolean {
+        val address = runCatching { adapter()?.address }.getOrNull() ?: return false
+        if (address.isBlank() || address == HIDDEN_ADAPTER_ADDRESS) return false
+        return device.address.equals(address, ignoreCase = true)
     }
 
     private fun markSynced(gatt: BluetoothGatt?) {
@@ -681,7 +749,9 @@ class HopNearbyController(
     }
 
     private companion object {
+        const val TAG = "HopNearby"
         const val RESYNC_MS = 15_000L
+        const val HIDDEN_ADAPTER_ADDRESS = "02:00:00:00:00:00"
         val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     }
 }

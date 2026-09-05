@@ -35,6 +35,7 @@ class HopViewModel(
         scope = viewModelScope,
         floorProvider = { profile.floor },
         selfIdProvider = { selfId },
+        profileProvider = { profile },
         snapshotProvider = { repository.snapshotForSync() },
         ingestRemote = { repository.ingestRemote(it) },
     )

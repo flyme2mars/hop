@@ -59,16 +59,42 @@ data class BlackoutSession(
     val status: BlackoutStatus = BlackoutStatus.None,
 )
 
-data class NearbyState(
-    val count: Int = 0,
-    val availability: NearbyAvailability = NearbyAvailability.Checking,
+data class NearbyPeer(
+    val id: String,
+    val name: String = "",
+    val room: String = "",
 ) {
+    fun label(): String {
+        val named = name.trim()
+        val roomLabel = room.trim()
+        return when {
+            named.isNotBlank() && roomLabel.isNotBlank() -> "$named · $roomLabel"
+            named.isNotBlank() -> named
+            roomLabel.isNotBlank() -> "Phone nearby · $roomLabel"
+            else -> "Phone nearby · ${shortId()}"
+        }
+    }
+
+    fun shortId(): String = id.take(6).ifBlank { "????" }
+}
+
+data class NearbyState(
+    val peers: List<NearbyPeer> = emptyList(),
+    val availability: NearbyAvailability = NearbyAvailability.Checking,
+    val searching: Boolean = false,
+) {
+    val count: Int get() = peers.size
+
     val needsPermission: Boolean get() = availability == NearbyAvailability.PermissionNeeded
 
     val needsBluetooth: Boolean get() = availability == NearbyAvailability.BluetoothOff
 
     fun statusLine(): String = when (availability) {
-        NearbyAvailability.Ready -> if (count > 0) "$count nearby" else "searching"
+        NearbyAvailability.Ready -> when {
+            peers.isNotEmpty() -> "$count nearby"
+            searching -> "searching"
+            else -> "Nobody nearby"
+        }
         NearbyAvailability.BluetoothOff -> "needs Bluetooth"
         NearbyAvailability.PermissionNeeded -> "needs permission"
         NearbyAvailability.Unavailable -> "Nearby unavailable"
