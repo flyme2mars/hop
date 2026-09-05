@@ -1,7 +1,11 @@
 package com.flyme2mars.hop
 
+import android.bluetooth.BluetoothAdapter
+import android.content.Intent
 import android.view.WindowManager
 import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -18,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
+import com.flyme2mars.hop.data.nearby.NearbyPermissions
 import com.flyme2mars.hop.ui.blackout.BlackoutScreen
 import com.flyme2mars.hop.ui.components.HopGlassBottomBar
 import com.flyme2mars.hop.ui.components.HopSideRail
@@ -47,11 +53,31 @@ import com.flyme2mars.hop.ui.theme.HopTheme
 
 @Composable
 fun HopApp(viewModel: HopViewModel = viewModel()) {
-    val start = if (viewModel.onboarded) HomeRoute else LaunchRoute
-    val backStack = remember { mutableStateListOf<HopRoute>(start) }
+    val startRoutes = remember {
+        buildList {
+            when {
+                !viewModel.onboarded -> add(LaunchRoute)
+                else -> {
+                    add(HomeRoute)
+                    if (viewModel.blackoutStartedAt > 0L) add(BlackoutRoute)
+                }
+            }
+        }
+    }
+    val backStack = remember { mutableStateListOf<HopRoute>().apply { addAll(startRoutes) } }
     val current = backStack.lastOrNull() ?: LaunchRoute
     val activity = LocalActivity.current
     val holdScreen = current is BlackoutRoute && viewModel.keepScreenOn
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) {
+        viewModel.onNearbyPermissionsResult()
+    }
+    val enableBluetoothLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
+        viewModel.onNearbyPermissionsResult()
+    }
 
     DisposableEffect(holdScreen, activity) {
         val window = activity?.window
@@ -63,6 +89,16 @@ fun HopApp(viewModel: HopViewModel = viewModel()) {
         onDispose {
             window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
+    }
+
+    LaunchedEffect(viewModel.onboarded) {
+        if (viewModel.onboarded) {
+            viewModel.startNearby()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { viewModel.stopNearby() }
     }
 
     NavDisplay(
@@ -97,13 +133,27 @@ fun HopApp(viewModel: HopViewModel = viewModel()) {
                 is HomeRoute -> NavEntry(key) {
                     HomeShell(
                         viewModel = viewModel,
-                        onBlackout = { backStack.add(BlackoutRoute) },
+                        onBlackout = {
+                            viewModel.enterBlackout()
+                            backStack.add(BlackoutRoute)
+                        },
+                        onRequestNearby = {
+                            permissionLauncher.launch(NearbyPermissions.required())
+                        },
+                        onEnableBluetooth = {
+                            enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+                        },
                     )
                 }
 
                 is BlackoutRoute -> NavEntry(key) {
+                    LaunchedEffect(Unit) { viewModel.enterBlackout() }
                     BlackoutScreen(
+                        startedAtMillis = viewModel.blackoutStartedAt,
+                        status = viewModel.blackoutStatus,
+                        onStatus = viewModel::updateBlackoutStatus,
                         onClose = {
+                            viewModel.exitBlackout()
                             if (backStack.lastOrNull() is BlackoutRoute) {
                                 backStack.removeAt(backStack.lastIndex)
                             }
@@ -119,12 +169,22 @@ fun HopApp(viewModel: HopViewModel = viewModel()) {
 private fun HomeShell(
     viewModel: HopViewModel,
     onBlackout: () -> Unit,
+    onRequestNearby: () -> Unit,
+    onEnableBluetooth: () -> Unit,
 ) {
     val colors = HopTheme.colors
     var tab by rememberSaveable { mutableStateOf(HomeTab.Floor) }
     var showNewPost by rememberSaveable { mutableStateOf(false) }
     var openedPostId by rememberSaveable { mutableStateOf<String?>(null) }
     var openedFromHistory by rememberSaveable { mutableStateOf(false) }
+    var askedNearbyPermission by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(viewModel.nearbyState.needsPermission) {
+        if (viewModel.nearbyState.needsPermission && !askedNearbyPermission) {
+            askedNearbyPermission = true
+            onRequestNearby()
+        }
+    }
 
     val openedPost = remember(openedPostId, viewModel.floorPosts, viewModel.historyPosts) {
         val id = openedPostId ?: return@remember null
@@ -170,7 +230,7 @@ private fun HomeShell(
                     when (current) {
                         HomeTab.Floor -> FloorScreen(
                             profile = viewModel.profile,
-                            nearbyCount = viewModel.nearbyCount,
+                            nearby = viewModel.nearbyState,
                             filter = viewModel.filter,
                             posts = viewModel.floorPosts,
                             onFilter = viewModel::updateFilter,
@@ -184,6 +244,8 @@ private fun HomeShell(
                             },
                             onNewPost = { showNewPost = true },
                             onBlackout = onBlackout,
+                            onRequestNearby = onRequestNearby,
+                            onEnableBluetooth = onEnableBluetooth,
                             contentPadding = innerPadding,
                         )
 

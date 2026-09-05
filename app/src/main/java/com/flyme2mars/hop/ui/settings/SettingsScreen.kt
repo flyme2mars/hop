@@ -156,8 +156,14 @@ fun SettingsScreen(
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Help on this floor stays here when the network is gone.",
+            text = "Works offline. No account. Nearby uses Bluetooth on this floor only.",
             style = MaterialTheme.typography.bodyLarge,
+            color = colors.textSecondary,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "Nearby works while Hop is open. Android may stop Bluetooth when the app is in the background or the screen is off.",
+            style = MaterialTheme.typography.bodyMedium,
             color = colors.textSecondary,
         )
         Spacer(Modifier.height(8.dp))

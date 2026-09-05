@@ -3,4 +3,11 @@
     <string name="app_name">Hop</string>
     <string name="launch_tagline">Your floor, offline.</string>
     <string name="blackout_label">power cut</string>
+    <string name="nearby_allow">Allow nearby</string>
+    <string name="nearby_enable_bluetooth">Turn on Bluetooth</string>
+    <string name="nearby_rationale">Hop finds phones on this floor over Bluetooth so posts can hop between you. Nothing is sent to the internet.</string>
+    <string name="perm_bluetooth_scan">Hop looks for other Hop phones on this floor over Bluetooth.</string>
+    <string name="perm_bluetooth_advertise">Hop lets other phones on this floor see that you are nearby.</string>
+    <string name="perm_bluetooth_connect">Hop can exchange posts with a nearby Hop phone when Bluetooth is on.</string>
+    <string name="perm_location_legacy">Older Android needs location permission to scan for nearby Hop phones. Hop does not use your map location.</string>
 </resources>

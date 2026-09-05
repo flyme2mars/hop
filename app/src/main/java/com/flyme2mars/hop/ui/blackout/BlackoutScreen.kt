@@ -30,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -38,28 +37,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.flyme2mars.hop.R
+import com.flyme2mars.hop.data.BlackoutStatus
 import com.flyme2mars.hop.data.formatElapsed
 import com.flyme2mars.hop.ui.theme.HopDimens
 import com.flyme2mars.hop.ui.theme.HopTheme
 import kotlinx.coroutines.delay
 
-enum class BlackoutStatus {
-    None,
-    Ok,
-    Help,
-}
-
 @Composable
 fun BlackoutScreen(
+    startedAtMillis: Long,
+    status: BlackoutStatus,
+    onStatus: (BlackoutStatus) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = HopTheme.colors
-    val startedAt = remember { System.currentTimeMillis() }
-    var elapsedSeconds by remember { mutableLongStateOf(0L) }
-    var status by remember { mutableStateOf(BlackoutStatus.None) }
+    val startedAt = if (startedAtMillis > 0L) startedAtMillis else System.currentTimeMillis()
+    var elapsedSeconds by remember(startedAt) { mutableLongStateOf(0L) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(startedAt) {
         while (true) {
             elapsedSeconds = ((System.currentTimeMillis() - startedAt) / 1000L).coerceAtLeast(0)
             delay(1000)
@@ -106,7 +102,7 @@ fun BlackoutScreen(
             )
             Spacer(Modifier.height(40.dp))
             Button(
-                onClick = { status = BlackoutStatus.Ok },
+                onClick = { onStatus(BlackoutStatus.Ok) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = HopDimens.Touch),
@@ -123,7 +119,7 @@ fun BlackoutScreen(
             }
             Spacer(Modifier.height(12.dp))
             OutlinedButton(
-                onClick = { status = BlackoutStatus.Help },
+                onClick = { onStatus(BlackoutStatus.Help) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = HopDimens.Touch),
@@ -142,6 +138,18 @@ fun BlackoutScreen(
                 shape = RoundedCornerShape(12.dp),
             ) {
                 Text("Need help", style = MaterialTheme.typography.titleMedium)
+            }
+            if (status != BlackoutStatus.None) {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = if (status == BlackoutStatus.Ok) {
+                        "Marked OK for this blackout"
+                    } else {
+                        "Help noted for this blackout"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.blackoutAccent.copy(alpha = 0.78f),
+                )
             }
         }
     }
