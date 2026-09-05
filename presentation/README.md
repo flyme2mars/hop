@@ -6,7 +6,7 @@ Hackathon presentation for Hop. Quiet seminar-bar slides, not a pitch template.
 
 | File | What |
 | --- | --- |
-| `Hop-OffGrid.pptx` | 16:9 deck (13.333 in × 7.5 in), 7 slides |
+| `Hop-OffGrid.pptx` | 16:9 deck (13.333 in × 7.5 in), 9 slides |
 | `Hop-OffGrid.pdf` | Same layout, fonts embedded |
 | `generate_deck.py` | Source of truth for both |
 | `fonts/` | Inter + Libre Baskerville (OFL) |
@@ -41,7 +41,9 @@ Writes `Hop-OffGrid.pptx` and `Hop-OffGrid.pdf` next to the script. PNG previews
 
 Paper `#F5F3EF`, charcoal title/close `#121212`, panels `#EEECE8` with no stroke or shadow. Ink is charcoal, not black. Kickers and footer are mid gray.
 
-Serif (Libre Baskerville) for slide titles and italic labels. Inter for body, kickers, and footer. Three sizes only: 32 / 16 / 11 pt. Footer is `AKSHAI KRISHNA S` left, `NN / 07` right.
+Serif (Libre Baskerville) for slide titles and italic labels. Inter for body, kickers, and footer. Three sizes only: 32 / 16 / 11 pt. Footer is `AKSHAI KRISHNA S` left, `NN / 09` right.
+
+`generate_deck.py` loads the five PNGs from `screenshots/` and places them on two dedicated slides. No invented UI.
 
 ## Slides
 
@@ -49,8 +51,10 @@ Serif (Libre Baskerville) for slide titles and italic labels. Inter for body, ki
 2. Problem: dead zones, power cuts, WhatsApp needs the tower
 3. Solution: local Offer / Ask / Note board, Bluetooth nearby sync, blackout mode
 4. Features: setup, board, claim, history, settings, blackout, nearby sync, offline alone
-5. Stack: Kotlin, Jetpack Compose, Material 3, Room, DataStore, BLE + GATT, GitHub Actions debug APK
-6. Future: multi-hop mesh, peer UX, background / battery, iOS if ever needed
-7. Close
+5. Screens: first open, floor board, new post (`launch`, `floor`, `sheet`)
+6. Screens: blackout and nearby (`blackout`, `nearby`)
+7. Stack: Kotlin, Jetpack Compose, Material 3, Room, DataStore, BLE + GATT, GitHub Actions debug APK
+8. Future: multi-hop mesh, peer UX, background / battery, iOS if ever needed
+9. Close
 
 Facts only. No invented metrics, competitors, or timelines.

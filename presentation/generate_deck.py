@@ -23,8 +23,10 @@ from pptx.util import Emu, Inches, Pt
 
 ROOT = Path(__file__).resolve().parent
 FONTS = ROOT / "fonts"
+SHOTS = ROOT / "screenshots"
 OUT_PPTX = ROOT / "Hop-OffGrid.pptx"
 OUT_PDF = ROOT / "Hop-OffGrid.pdf"
+REQUIRED_SHOTS = ("launch", "floor", "sheet", "blackout", "nearby")
 
 # Exact 16:9 widescreen (13.333... in × 7.5 in)
 SLIDE_W_EMU = 12_192_000
@@ -47,7 +49,7 @@ SANS = "Inter"
 PAPER = (0xF5, 0xF3, 0xEF)
 PANEL = (0xEE, 0xEC, 0xE8)
 DARK = (0x12, 0x12, 0x12)
-INK = (0x1C, 0x1B, 0x19)
+INK = (0x12, 0x12, 0x12)
 MUTED = (0x5F, 0x5C, 0x56)
 CREAM = (0xF5, 0xF3, 0xEF)
 MUTED_DARK = (0xB0, 0xAD, 0xA6)
@@ -83,11 +85,21 @@ class TextBox:
 
 
 @dataclass
+class ImageBox:
+    x: float
+    y: float
+    w: float
+    h: float
+    path: Path
+
+
+@dataclass
 class SlideSpec:
     name: str
     bg: tuple[int, int, int]
     rects: list[Rect] = field(default_factory=list)
     texts: list[TextBox] = field(default_factory=list)
+    images: list[ImageBox] = field(default_factory=list)
 
 
 def rgb(c: tuple[int, int, int]) -> RGBColor:
@@ -178,6 +190,48 @@ def grid_panels(
     return rects, texts
 
 
+def shot(name: str) -> Path:
+    path = SHOTS / f"{name}.png"
+    if not path.exists():
+        raise FileNotFoundError(f"Missing screenshot: {path}")
+    return path
+
+
+def phone_aspect(path: Path) -> float:
+    from PIL import Image
+
+    with Image.open(path) as im:
+        w, h = im.size
+    return w / h
+
+
+def phone_row(
+    items: Sequence[tuple[str, str]],
+    top: float = 1.74,
+    height: float = 4.96,
+    gap: float = 0.36,
+) -> tuple[list[ImageBox], list[TextBox]]:
+    """Centered row of real device shots with italic labels. No frames."""
+    label_h = 0.30
+    phone_h = height - label_h
+    images: list[ImageBox] = []
+    texts: list[TextBox] = []
+    sized: list[tuple[Path, str, float, float]] = []
+    for name, label in items:
+        path = shot(name)
+        pw = phone_h * phone_aspect(path)
+        sized.append((path, label, pw, phone_h))
+    total_w = sum(pw for _, _, pw, _ in sized) + gap * (len(sized) - 1)
+    x = (SLIDE_W - total_w) / 2
+    for path, label, pw, ph in sized:
+        images.append(ImageBox(x, top, pw, ph, path))
+        texts.append(
+            TextBox(x - 0.08, top + ph + 0.04, pw + 0.16, 0.26, label, "serif-italic", "meta", MUTED, align="center")
+        )
+        x += pw + gap
+    return images, texts
+
+
 def two_col_lists(
     left: Sequence[tuple[str, str]],
     right: Sequence[tuple[str, str]],
@@ -209,7 +263,7 @@ def two_col_lists(
 
 
 def build_slides() -> list[SlideSpec]:
-    total = 7
+    total = 9
     slides: list[SlideSpec] = []
 
     # 1. Title
@@ -280,9 +334,38 @@ def build_slides() -> list[SlideSpec]:
     t4.texts += tx
     slides.append(t4)
 
-    # 5. Tech
-    t5 = SlideSpec("stack", PAPER, texts=kicker_footer(5, total, "05  ·  STACK", dark=False))
-    t5.texts.append(paper_title("What it is built with."))
+    # 5. Screens — first open, floor, new post
+    t5 = SlideSpec("board", PAPER, texts=kicker_footer(5, total, "05  ·  SCREENS", dark=False))
+    t5.texts.append(paper_title("The floor board."))
+    imgs, labels = phone_row(
+        [
+            ("launch", "First open"),
+            ("floor", "Floor"),
+            ("sheet", "New post"),
+        ],
+        gap=0.34,
+    )
+    t5.images += imgs
+    t5.texts += labels
+    slides.append(t5)
+
+    # 6. Screens — blackout and nearby
+    t6 = SlideSpec("states", PAPER, texts=kicker_footer(6, total, "06  ·  SCREENS", dark=False))
+    t6.texts.append(paper_title("Blackout, and nearby."))
+    imgs, labels = phone_row(
+        [
+            ("blackout", "Blackout"),
+            ("nearby", "Nearby"),
+        ],
+        gap=0.55,
+    )
+    t6.images += imgs
+    t6.texts += labels
+    slides.append(t6)
+
+    # 7. Tech
+    t7 = SlideSpec("stack", PAPER, texts=kicker_footer(7, total, "07  ·  STACK", dark=False))
+    t7.texts.append(paper_title("What it is built with."))
     r, tx = grid_panels(
         [
             ("App", "Kotlin. Jetpack Compose. Material 3."),
@@ -293,13 +376,13 @@ def build_slides() -> list[SlideSpec]:
         cols=2,
         rows=2,
     )
-    t5.rects += r
-    t5.texts += tx
-    slides.append(t5)
+    t7.rects += r
+    t7.texts += tx
+    slides.append(t7)
 
-    # 6. Future
-    t6 = SlideSpec("future", PAPER, texts=kicker_footer(6, total, "06  ·  FUTURE", dark=False))
-    t6.texts.append(paper_title("After the first floor."))
+    # 8. Future
+    t8 = SlideSpec("future", PAPER, texts=kicker_footer(8, total, "08  ·  FUTURE", dark=False))
+    t8.texts.append(paper_title("After the first floor."))
     r, tx = grid_panels(
         [
             ("Mesh", "Stronger multi-hop mesh."),
@@ -310,19 +393,19 @@ def build_slides() -> list[SlideSpec]:
         cols=2,
         rows=2,
     )
-    t6.rects += r
-    t6.texts += tx
-    slides.append(t6)
+    t8.rects += r
+    t8.texts += tx
+    slides.append(t8)
 
-    # 7. Close
-    t7 = SlideSpec("close", DARK, texts=kicker_footer(7, total, "07  ·  OFFGRID", dark=True))
-    t7.texts += [
+    # 9. Close
+    t9 = SlideSpec("close", DARK, texts=kicker_footer(9, total, "09  ·  OFFGRID", dark=True))
+    t9.texts += [
         TextBox(M, 2.28, 12.13, 0.58, "Hop", "serif", "title", CREAM),
         TextBox(M, 2.96, 12.13, 0.40, "Your floor, offline.", "serif-italic", "body", CREAM),
         TextBox(M, 3.92, 12.13, 0.30, "github.com/flyme2mars/hop", "sans", "body", MUTED_DARK),
         TextBox(M, 4.30, 12.13, 0.30, "Solo OffGrid entry  ·  open source", "sans", "body", MUTED_DARK),
     ]
-    slides.append(t7)
+    slides.append(t9)
 
     return slides
 
@@ -406,6 +489,8 @@ def write_pptx(slides: Sequence[SlideSpec], path: Path) -> None:
         set_slide_bg(slide, spec.bg)
         for rect in spec.rects:
             add_rect(slide, rect)
+        for img in spec.images:
+            slide.shapes.add_picture(str(img.path), Inches(img.x), Inches(img.y), Inches(img.w), Inches(img.h))
         for box in spec.texts:
             add_textbox(slide, box)
     prs.core_properties.title = "Hop · OffGrid"
@@ -611,12 +696,30 @@ def render_qa(slides: Sequence[SlideSpec], out_dir: Path, dpi: int = 144) -> lis
         ):
             if overlap(inch_box(a), inch_box(b)):
                 issues.append(f"slide {i} overlapping panels")
+        for img in spec.images:
+            if img.x < -0.01 or img.y < -0.01 or img.x + img.w > SLIDE_W + 0.01 or img.y + img.h > SLIDE_H + 0.01:
+                issues.append(f"slide {i} image outside slide: {img.path.name}")
+        for a, b in (
+            (spec.images[j], spec.images[k])
+            for j in range(len(spec.images))
+            for k in range(j + 1, len(spec.images))
+        ):
+            if overlap(inch_box(a), inch_box(b)):
+                issues.append(f"slide {i} overlapping shots")
 
         for rect in spec.rects:
             x1, y1 = rect.x * dpi, rect.y * dpi
             x2, y2 = (rect.x + rect.w) * dpi, (rect.y + rect.h) * dpi
             rad = rect.radius * dpi
             dr.rounded_rectangle((x1, y1, x2, y2), radius=rad, fill=rect.fill)
+
+        for img in spec.images:
+            src = Image.open(img.path).convert("RGBA")
+            dest_size = (max(1, int(img.w * dpi)), max(1, int(img.h * dpi)))
+            fitted = src.resize(dest_size, Image.Resampling.LANCZOS)
+            paper = Image.new("RGBA", dest_size, spec.bg + (255,))
+            paper.alpha_composite(fitted)
+            im.paste(paper.convert("RGB"), (int(img.x * dpi), int(img.y * dpi)))
 
         for box in spec.texts:
             fnt = font(box.face, box.role)
@@ -697,6 +800,16 @@ def write_pdf(slides: Sequence[SlideSpec], path: Path) -> None:
             x, y = rect.x * 72, y_top(rect.y, rect.h)
             rad = rect.radius * 72
             c.roundRect(x, y, rect.w * 72, rect.h * 72, rad, fill=1, stroke=0)
+        for img in spec.images:
+            c.drawImage(
+                str(img.path),
+                img.x * 72,
+                y_top(img.y, img.h),
+                width=img.w * 72,
+                height=img.h * 72,
+                preserveAspectRatio=True,
+                mask="auto",
+            )
         for box in spec.texts:
             c.setFillColor(rl_color(box.color))
             c.setFont(rl_font(box.face), pt_for(box.role))
@@ -767,6 +880,9 @@ def main() -> None:
     ):
         if not needed.exists():
             raise SystemExit(f"Missing font: {needed}")
+    for name in REQUIRED_SHOTS:
+        if not shot(name).exists():
+            raise SystemExit(f"Missing screenshot: {shot(name)}")
 
     slides = build_slides()
     if len(slides) > 10:
