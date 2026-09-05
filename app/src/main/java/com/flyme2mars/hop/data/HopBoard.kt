@@ -15,7 +15,11 @@ fun List<HopPost>.claimedHistory(): List<HopPost> =
 
 fun mergeRemotePost(local: HopPost?, remote: HopPost): HopPost {
     if (local == null) return remote
-    return local.copy(claimed = local.claimed || remote.claimed)
+    return when {
+        remote.updatedAtMillis > local.updatedAtMillis -> remote
+        remote.updatedAtMillis < local.updatedAtMillis -> local
+        else -> local.copy(claimed = local.claimed || remote.claimed)
+    }
 }
 
 fun formatRelativeTime(createdAtMillis: Long, nowMillis: Long = System.currentTimeMillis()): String {

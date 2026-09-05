@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattServer
 import android.bluetooth.BluetoothGattServerCallback
 import android.bluetooth.BluetoothGattService
@@ -32,6 +33,8 @@ import com.flyme2mars.hop.data.HopPost
 import com.flyme2mars.hop.data.HopSyncCodec
 import com.flyme2mars.hop.data.NearbyAvailability
 import com.flyme2mars.hop.data.NearbyState
+import java.util.ArrayDeque
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
@@ -58,55 +61,74 @@ class HopNearbyController(
 
     private val started = AtomicBoolean(false)
     private val connecting = AtomicBoolean(false)
-    private val lastConnectAt = ConcurrentHashMap<String, Long>()
+    private val lastSyncAt = ConcurrentHashMap<String, Long>()
+    private val devicesByPeer = ConcurrentHashMap<String, BluetoothDevice>()
+    private val pending = ArrayDeque<BluetoothDevice>()
 
     @Volatile
     private var snapshotBytes: ByteArray = ByteArray(0)
 
     private var pruneJob: Job? = null
     private var snapshotJob: Job? = null
+    private var resyncJob: Job? = null
     private var scanner: BluetoothLeScanner? = null
     private var advertiser: BluetoothLeAdvertiser? = null
     private var gattServer: BluetoothGattServer? = null
     private var activeGatt: BluetoothGatt? = null
+    private var activePeerId: String? = null
+    private var inboundAssembler = HopSyncFramer.Assembler()
+    private var outboundChunks: List<ByteArray> = emptyList()
+    private var outboundIndex = 0
     private var receiverRegistered = false
+    private var lastPublishedCount = -1
+    private var lastPublishedAvailability: NearbyAvailability? = null
+    private var writeOwnAfterRead = false
 
     private val bluetoothReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action != BluetoothAdapter.ACTION_STATE_CHANGED) return
-            publishAvailability()
-            if (started.get() && adapter()?.isEnabled == true && NearbyPermissions.hasAll(appContext)) {
+            publish(force = true)
+            if (started.get() && canUseRadio()) {
                 startRadioLocked()
             } else if (adapter()?.isEnabled != true) {
                 stopRadioLocked()
                 tracker.prune()
-                publishCount()
+                publish(force = true)
             }
         }
     }
 
     fun start() {
         if (!started.compareAndSet(false, true)) {
-            publishAvailability()
+            publish(force = true)
             if (canUseRadio()) startRadioLocked()
             return
         }
         registerReceiver()
-        publishAvailability()
+        publish(force = true)
         pruneJob = scope.launch {
             while (isActive) {
-                tracker.prune()
-                publishCount()
-                delay(2_000)
+                val changed = tracker.prune()
+                if (changed) publish()
+                delay(5_000)
             }
         }
         snapshotJob = scope.launch {
             while (isActive) {
                 refreshSnapshot()
-                delay(5_000)
+                delay(8_000)
+            }
+        }
+        resyncJob = scope.launch {
+            delay(3_000)
+            while (isActive) {
+                enqueueKnownPeers()
+                drainQueue()
+                delay(12_000)
             }
         }
         if (canUseRadio()) startRadioLocked()
+        scope.launch { refreshSnapshot() }
     }
 
     fun stop() {
@@ -115,18 +137,21 @@ class HopNearbyController(
         pruneJob = null
         snapshotJob?.cancel()
         snapshotJob = null
+        resyncJob?.cancel()
+        resyncJob = null
         stopRadioLocked()
         unregisterReceiver()
-        _state.value = NearbyState(count = 0, availability = currentAvailability())
+        pending.clear()
+        publish(force = true)
     }
 
     fun onPermissionsChanged() {
-        publishAvailability()
+        publish(force = true)
         if (started.get() && canUseRadio()) {
             startRadioLocked()
         } else if (!NearbyPermissions.hasAll(appContext)) {
             stopRadioLocked()
-            _state.value = NearbyState(count = 0, availability = NearbyAvailability.PermissionNeeded)
+            publish(force = true)
         }
     }
 
@@ -134,9 +159,14 @@ class HopNearbyController(
         scope.launch { refreshSnapshot() }
     }
 
+    fun onFloorChanged() {
+        if (started.get() && canUseRadio()) {
+            startAdvertising(adapter() ?: return)
+        }
+    }
+
     private suspend fun refreshSnapshot() {
-        val encoded = runCatching { HopSyncCodec.encode(snapshotProvider()) }.getOrDefault(ByteArray(0))
-        snapshotBytes = encoded
+        snapshotBytes = runCatching { HopSyncCodec.encode(snapshotProvider()) }.getOrDefault(ByteArray(0))
     }
 
     private fun canUseRadio(): Boolean =
@@ -153,18 +183,13 @@ class HopNearbyController(
         return NearbyAvailability.Ready
     }
 
-    private fun publishAvailability() {
+    private fun publish(force: Boolean = false) {
         val availability = currentAvailability()
         val count = if (availability == NearbyAvailability.Ready) tracker.count() else 0
+        if (!force && count == lastPublishedCount && availability == lastPublishedAvailability) return
+        lastPublishedCount = count
+        lastPublishedAvailability = availability
         _state.value = NearbyState(count = count, availability = availability)
-    }
-
-    private fun publishCount() {
-        val availability = currentAvailability()
-        _state.value = NearbyState(
-            count = if (availability == NearbyAvailability.Ready) tracker.count() else 0,
-            availability = availability,
-        )
     }
 
     private fun hasBleFeature(): Boolean =
@@ -180,7 +205,7 @@ class HopNearbyController(
         if (!NearbyPermissions.hasAll(appContext)) return
         val adapter = adapter() ?: return
         if (!adapter.isEnabled) return
-        startGattServer(adapter)
+        startGattServer()
         startAdvertising(adapter)
         startScanning(adapter)
     }
@@ -191,21 +216,21 @@ class HopNearbyController(
         scanner = null
         runCatching { advertiser?.stopAdvertising(advertiseCallback) }
         advertiser = null
-        runCatching { activeGatt?.close() }
-        activeGatt = null
-        val manager = appContext.getSystemService(BluetoothManager::class.java)
+        finishClient(activeGatt)
         runCatching { gattServer?.close() }
         gattServer = null
+        connecting.set(false)
     }
 
     @SuppressLint("MissingPermission")
     private fun startAdvertising(adapter: BluetoothAdapter) {
         if (!adapter.isMultipleAdvertisementSupported) return
         val next = adapter.bluetoothLeAdvertiser ?: return
+        runCatching { advertiser?.stopAdvertising(advertiseCallback) }
         advertiser = next
         val payload = HopBleIds.presencePayload(floorProvider(), selfIdProvider())
         val settings = AdvertiseSettings.Builder()
-            .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
+            .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
             .setConnectable(true)
             .setTimeout(0)
             .build()
@@ -221,27 +246,38 @@ class HopNearbyController(
     @SuppressLint("MissingPermission")
     private fun startScanning(adapter: BluetoothAdapter) {
         val next = adapter.bluetoothLeScanner ?: return
+        runCatching { scanner?.stopScan(scanCallback) }
         scanner = next
         val filter = ScanFilter.Builder()
             .setServiceUuid(ParcelUuid(HopBleIds.SERVICE_UUID))
             .build()
         val settings = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
         runCatching { next.startScan(listOf(filter), settings, scanCallback) }
     }
 
     @SuppressLint("MissingPermission")
-    private fun startGattServer(adapter: BluetoothAdapter) {
+    private fun startGattServer() {
         if (gattServer != null) return
         val manager = appContext.getSystemService(BluetoothManager::class.java) ?: return
         val server = runCatching { manager.openGattServer(appContext, gattServerCallback) }.getOrNull() ?: return
         val service = BluetoothGattService(HopBleIds.SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
         val characteristic = BluetoothGattCharacteristic(
             HopBleIds.SYNC_UUID,
-            BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_WRITE,
+            BluetoothGattCharacteristic.PROPERTY_READ or
+                BluetoothGattCharacteristic.PROPERTY_WRITE or
+                BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE or
+                BluetoothGattCharacteristic.PROPERTY_NOTIFY,
             BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE,
         )
+        characteristic.addDescriptor(
+            BluetoothGattDescriptor(
+                CCCD_UUID,
+                BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE,
+            ),
+        )
+        @Suppress("DEPRECATION")
         characteristic.value = snapshotBytes
         service.addCharacteristic(characteristic)
         runCatching { server.addService(service) }
@@ -250,8 +286,7 @@ class HopNearbyController(
 
     private val advertiseCallback = object : AdvertiseCallback() {
         override fun onStartFailure(errorCode: Int) {
-            // Scan-only presence still counts other advertisers.
-            publishAvailability()
+            publish(force = true)
         }
     }
 
@@ -263,54 +298,92 @@ class HopNearbyController(
             val selfId = selfIdProvider()
             if (!HopBleIds.sameFloor(payload, floor)) return
             if (HopBleIds.isSelf(payload, selfId)) return
-            val peerId = result.device?.address.orEmpty()
-            if (peerId.isBlank()) return
-            tracker.mark(peerId)
-            publishCount()
-            maybeConnect(result.device)
+            val peerId = HopBleIds.peerId(payload) ?: return
+            val device = result.device ?: return
+            devicesByPeer[peerId] = device
+            val added = tracker.mark(peerId)
+            if (added) publish()
+            enqueue(device, peerId)
+            drainQueue()
         }
 
         override fun onScanFailed(errorCode: Int) {
-            if (!hasBleFeature()) {
-                _state.value = NearbyState(count = 0, availability = NearbyAvailability.Unavailable)
-            }
+            if (!hasBleFeature()) publish(force = true)
+        }
+    }
+
+    private fun enqueue(device: BluetoothDevice, peerId: String) {
+        val last = lastSyncAt[peerId] ?: 0L
+        if (System.currentTimeMillis() - last < RESYNC_MS) return
+        val address = device.address ?: return
+        val already = pending.any { it.address == address } || activeGatt?.device?.address == address
+        if (already) return
+        pending.addLast(device)
+    }
+
+    private fun enqueueKnownPeers() {
+        devicesByPeer.forEach { (peerId, device) ->
+            enqueue(device, peerId)
         }
     }
 
     @SuppressLint("MissingPermission")
-    private fun maybeConnect(device: BluetoothDevice?) {
-        device ?: return
-        if (!NearbyPermissions.hasAll(appContext)) return
-        val address = device.address ?: return
-        val now = System.currentTimeMillis()
-        val last = lastConnectAt[address] ?: 0L
-        if (now - last < CONNECT_COOLDOWN_MS) return
+    private fun drainQueue() {
+        if (!started.get() || !canUseRadio()) return
         if (!connecting.compareAndSet(false, true)) return
-        lastConnectAt[address] = now
+        val next = if (pending.isEmpty()) null else pending.removeFirst()
+        if (next == null) {
+            connecting.set(false)
+            return
+        }
+        inboundAssembler.reset()
+        outboundChunks = emptyList()
+        outboundIndex = 0
+        writeOwnAfterRead = false
+        activePeerId = devicesByPeer.entries.firstOrNull { it.value.address == next.address }?.key
         activeGatt = runCatching {
-            device.connectGatt(appContext, false, gattClientCallback, BluetoothDevice.TRANSPORT_LE)
+            next.connectGatt(appContext, false, gattClientCallback, BluetoothDevice.TRANSPORT_LE)
         }.getOrNull()
-        if (activeGatt == null) connecting.set(false)
+        if (activeGatt == null) {
+            connecting.set(false)
+            drainQueue()
+        } else {
+            scope.launch {
+                delay(12_000)
+                if (activeGatt?.device?.address == next.address) {
+                    finishClient(activeGatt)
+                    drainQueue()
+                }
+            }
+        }
     }
 
     private val gattClientCallback = object : BluetoothGattCallback() {
         @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
-                runCatching { gatt.discoverServices() }
+                runCatching { gatt.requestMtu(517) }
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                markSynced(gatt)
+                val wasActive = activeGatt === gatt
                 finishClient(gatt)
+                if (wasActive) drainQueue()
             }
         }
 
         @SuppressLint("MissingPermission")
+        override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
+            runCatching { gatt.discoverServices() }
+        }
+
+        @SuppressLint("MissingPermission")
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
-            val characteristic = gatt.getService(HopBleIds.SERVICE_UUID)
-                ?.getCharacteristic(HopBleIds.SYNC_UUID)
+            val characteristic = syncCharacteristic(gatt)
             if (characteristic == null) {
                 finishClient(gatt)
                 return
             }
+            enableNotify(gatt, characteristic)
             runCatching { gatt.readCharacteristic(characteristic) }
         }
 
@@ -324,7 +397,7 @@ class HopNearbyController(
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 handleRemoteBytes(characteristic.value)
             }
-            writeOwnSnapshot(gatt, characteristic)
+            requestRemoteDump(gatt, characteristic)
         }
 
         override fun onCharacteristicRead(
@@ -336,7 +409,28 @@ class HopNearbyController(
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 handleRemoteBytes(value)
             }
-            writeOwnSnapshot(gatt, characteristic)
+            requestRemoteDump(gatt, characteristic)
+        }
+
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray,
+        ) {
+            if (handleFramed(value)) {
+                writeOwnSnapshot(gatt, characteristic)
+            }
+        }
+
+        @Deprecated("Deprecated in Java")
+        @Suppress("DEPRECATION")
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+        ) {
+            if (handleFramed(characteristic.value)) {
+                writeOwnSnapshot(gatt, characteristic)
+            }
         }
 
         @SuppressLint("MissingPermission")
@@ -345,29 +439,113 @@ class HopNearbyController(
             characteristic: BluetoothGattCharacteristic,
             status: Int,
         ) {
+            if (writeOwnAfterRead) {
+                writeOwnAfterRead = false
+                writeOwnSnapshot(gatt, characteristic)
+                return
+            }
+            if (status == BluetoothGatt.GATT_SUCCESS && outboundIndex < outboundChunks.size) {
+                writeNextChunk(gatt, characteristic)
+            } else {
+                markSynced(gatt)
+                finishClient(gatt)
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun enableNotify(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+        gatt.setCharacteristicNotification(characteristic, true)
+        val descriptor = characteristic.getDescriptor(CCCD_UUID) ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            gatt.writeDescriptor(descriptor, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+        } else {
+            @Suppress("DEPRECATION")
+            descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+            @Suppress("DEPRECATION")
+            gatt.writeDescriptor(descriptor)
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun requestRemoteDump(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+        writeOwnAfterRead = true
+        val requested = writeValue(gatt, characteristic, HopSyncFramer.request())
+        if (!requested) writeOwnSnapshot(gatt, characteristic)
+    }
+
+    private fun handleFramed(bytes: ByteArray?): Boolean {
+        val payload = bytes ?: return false
+        val assembled = inboundAssembler.add(payload) ?: return false
+        handleRemoteBytes(assembled)
+        return true
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun writeOwnSnapshot(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+        val body = snapshotBytes
+        outboundChunks = HopSyncFramer.chunk(body, chunkSizeFor(gatt))
+        outboundIndex = 0
+        if (outboundChunks.isEmpty()) {
+            markSynced(gatt)
+            finishClient(gatt)
+            return
+        }
+        writeNextChunk(gatt, characteristic)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun writeNextChunk(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+        if (outboundIndex >= outboundChunks.size) {
+            markSynced(gatt)
+            finishClient(gatt)
+            return
+        }
+        val chunk = outboundChunks[outboundIndex]
+        outboundIndex += 1
+        val wrote = writeValue(gatt, characteristic, chunk)
+        if (!wrote) {
+            markSynced(gatt)
             finishClient(gatt)
         }
     }
 
     @SuppressLint("MissingPermission")
-    private fun writeOwnSnapshot(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-        val payload = snapshotBytes
-        val wrote = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    private fun writeValue(
+        gatt: BluetoothGatt,
+        characteristic: BluetoothGattCharacteristic,
+        value: ByteArray,
+    ): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             gatt.writeCharacteristic(
                 characteristic,
-                payload,
+                value,
                 BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT,
             ) == BluetoothStatusCodes.SUCCESS
         } else {
             @Suppress("DEPRECATION")
-            characteristic.value = payload
+            characteristic.value = value
+            @Suppress("DEPRECATION")
+            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
             @Suppress("DEPRECATION")
             gatt.writeCharacteristic(characteristic)
         }
-        if (!wrote) finishClient(gatt)
     }
 
+    private fun chunkSizeFor(gatt: BluetoothGatt): Int {
+        val mtu = runCatching {
+            val method = gatt.javaClass.methods.firstOrNull { it.name == "getMtu" && it.parameterCount == 0 }
+            method?.invoke(gatt) as? Int
+        }.getOrNull() ?: 23
+        return (mtu - 3 - HopSyncFramer.HEADER_SIZE).coerceIn(20, 180)
+    }
+
+    private fun syncCharacteristic(gatt: BluetoothGatt): BluetoothGattCharacteristic? =
+        gatt.getService(HopBleIds.SERVICE_UUID)?.getCharacteristic(HopBleIds.SYNC_UUID)
+
     private val gattServerCallback = object : BluetoothGattServerCallback() {
+        private val inbound = ConcurrentHashMap<String, HopSyncFramer.Assembler>()
+
         @SuppressLint("MissingPermission")
         override fun onCharacteristicReadRequest(
             device: BluetoothDevice,
@@ -384,6 +562,23 @@ class HopNearbyController(
         }
 
         @SuppressLint("MissingPermission")
+        override fun onDescriptorWriteRequest(
+            device: BluetoothDevice,
+            requestId: Int,
+            descriptor: BluetoothGattDescriptor,
+            preparedWrite: Boolean,
+            responseNeeded: Boolean,
+            offset: Int,
+            value: ByteArray?,
+        ) {
+            if (responseNeeded) {
+                runCatching {
+                    gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value)
+                }
+            }
+        }
+
+        @SuppressLint("MissingPermission")
         override fun onCharacteristicWriteRequest(
             device: BluetoothDevice,
             requestId: Int,
@@ -393,7 +588,16 @@ class HopNearbyController(
             offset: Int,
             value: ByteArray?,
         ) {
-            if (value != null) handleRemoteBytes(value)
+            val payload = value ?: ByteArray(0)
+            if (HopSyncFramer.isRequest(payload)) {
+                notifyChunks(device, characteristic, snapshotBytes)
+            } else {
+                val assembler = inbound.getOrPut(device.address ?: device.toString()) {
+                    HopSyncFramer.Assembler()
+                }
+                val assembled = assembler.add(payload)
+                if (assembled != null) handleRemoteBytes(assembled)
+            }
             if (responseNeeded) {
                 runCatching {
                     gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value)
@@ -402,19 +606,61 @@ class HopNearbyController(
         }
     }
 
+    @SuppressLint("MissingPermission")
+    private fun notifyChunks(
+        device: BluetoothDevice,
+        characteristic: BluetoothGattCharacteristic,
+        body: ByteArray,
+    ) {
+        val server = gattServer ?: return
+        val chunks = HopSyncFramer.chunk(body, HopSyncFramer.DEFAULT_CHUNK)
+        chunks.forEach { chunk ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                server.notifyCharacteristicChanged(device, characteristic, false, chunk)
+            } else {
+                @Suppress("DEPRECATION")
+                characteristic.value = chunk
+                @Suppress("DEPRECATION")
+                server.notifyCharacteristicChanged(device, characteristic, false)
+            }
+        }
+    }
+
     private fun handleRemoteBytes(bytes: ByteArray?) {
         val payload = bytes ?: return
-        val posts = HopSyncCodec.decode(payload)
+        val framed = inboundAssembler.add(payload)
+        val body = framed ?: payload
+        val posts = HopSyncCodec.decode(body)
         if (posts.isEmpty()) return
         scope.launch { runCatching { ingestRemote(posts) } }
     }
 
+    private fun markSynced(gatt: BluetoothGatt?) {
+        val address = gatt?.device?.address
+        val peerId = activePeerId
+            ?: devicesByPeer.entries.firstOrNull { it.value.address == address }?.key
+            ?: address
+        if (!peerId.isNullOrBlank()) {
+            lastSyncAt[peerId] = System.currentTimeMillis()
+        }
+    }
+
     @SuppressLint("MissingPermission")
-    private fun finishClient(gatt: BluetoothGatt) {
+    private fun finishClient(gatt: BluetoothGatt?) {
+        if (gatt == null) {
+            connecting.set(false)
+            activeGatt = null
+            activePeerId = null
+            return
+        }
         runCatching { gatt.disconnect() }
         runCatching { gatt.close() }
-        if (activeGatt === gatt) activeGatt = null
+        if (activeGatt === gatt) {
+            activeGatt = null
+            activePeerId = null
+        }
         connecting.set(false)
+        inboundAssembler.reset()
     }
 
     private fun registerReceiver() {
@@ -435,6 +681,7 @@ class HopNearbyController(
     }
 
     private companion object {
-        const val CONNECT_COOLDOWN_MS = 45_000L
+        const val RESYNC_MS = 15_000L
+        val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     }
 }

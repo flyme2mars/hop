@@ -61,21 +61,27 @@ class HopViewModel(
         private set
     var selfId by mutableStateOf(bootstrap.selfId)
         private set
-    var blackoutStartedAt by mutableStateOf(savedStateHandle[KEY_BLACKOUT_START] ?: 0L)
+    private val restoredBlackout = runBlocking { settings.blackoutSession() }
+
+    var blackoutStartedAt by mutableStateOf(
+        savedStateHandle[KEY_BLACKOUT_START] ?: restoredBlackout?.startedAtMillis ?: 0L,
+    )
         private set
     var blackoutStatus by mutableStateOf(
         savedStateHandle.get<String>(KEY_BLACKOUT_STATUS)
             ?.let { runCatching { BlackoutStatus.valueOf(it) }.getOrNull() }
+            ?: restoredBlackout?.status
             ?: BlackoutStatus.None,
     )
         private set
 
     init {
+        if (blackoutStartedAt > 0L) {
+            savedStateHandle[KEY_BLACKOUT_START] = blackoutStartedAt
+            savedStateHandle[KEY_BLACKOUT_STATUS] = blackoutStatus.name
+        }
         viewModelScope.launch {
             selfId = settings.ensureSelfId()
-            if (blackoutStartedAt == 0L) {
-                settings.saveBlackout(null)
-            }
             repository.ensureSeeded()
             settings.prefs.collectLatest { prefs ->
                 profile = prefs.profile
@@ -134,6 +140,7 @@ class HopViewModel(
         profile = next
         viewModelScope.launch {
             settings.saveProfile(next, onboarded = onboarded)
+            nearby.onFloorChanged()
             nearby.onPermissionsChanged()
         }
     }

@@ -1,5 +1,7 @@
 package com.flyme2mars.hop
 
+import android.bluetooth.BluetoothAdapter
+import android.content.Intent
 import android.view.WindowManager
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -51,13 +53,28 @@ import com.flyme2mars.hop.ui.theme.HopTheme
 
 @Composable
 fun HopApp(viewModel: HopViewModel = viewModel()) {
-    val start = if (viewModel.onboarded) HomeRoute else LaunchRoute
-    val backStack = remember { mutableStateListOf<HopRoute>(start) }
+    val startRoutes = remember {
+        buildList {
+            when {
+                !viewModel.onboarded -> add(LaunchRoute)
+                else -> {
+                    add(HomeRoute)
+                    if (viewModel.blackoutStartedAt > 0L) add(BlackoutRoute)
+                }
+            }
+        }
+    }
+    val backStack = remember { mutableStateListOf<HopRoute>().apply { addAll(startRoutes) } }
     val current = backStack.lastOrNull() ?: LaunchRoute
     val activity = LocalActivity.current
     val holdScreen = current is BlackoutRoute && viewModel.keepScreenOn
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
+    ) {
+        viewModel.onNearbyPermissionsResult()
+    }
+    val enableBluetoothLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
     ) {
         viewModel.onNearbyPermissionsResult()
     }
@@ -123,6 +140,9 @@ fun HopApp(viewModel: HopViewModel = viewModel()) {
                         onRequestNearby = {
                             permissionLauncher.launch(NearbyPermissions.required())
                         },
+                        onEnableBluetooth = {
+                            enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+                        },
                     )
                 }
 
@@ -150,12 +170,21 @@ private fun HomeShell(
     viewModel: HopViewModel,
     onBlackout: () -> Unit,
     onRequestNearby: () -> Unit,
+    onEnableBluetooth: () -> Unit,
 ) {
     val colors = HopTheme.colors
     var tab by rememberSaveable { mutableStateOf(HomeTab.Floor) }
     var showNewPost by rememberSaveable { mutableStateOf(false) }
     var openedPostId by rememberSaveable { mutableStateOf<String?>(null) }
     var openedFromHistory by rememberSaveable { mutableStateOf(false) }
+    var askedNearbyPermission by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(viewModel.nearbyState.needsPermission) {
+        if (viewModel.nearbyState.needsPermission && !askedNearbyPermission) {
+            askedNearbyPermission = true
+            onRequestNearby()
+        }
+    }
 
     val openedPost = remember(openedPostId, viewModel.floorPosts, viewModel.historyPosts) {
         val id = openedPostId ?: return@remember null
@@ -216,6 +245,7 @@ private fun HomeShell(
                             onNewPost = { showNewPost = true },
                             onBlackout = onBlackout,
                             onRequestNearby = onRequestNearby,
+                            onEnableBluetooth = onEnableBluetooth,
                             contentPadding = innerPadding,
                         )
 

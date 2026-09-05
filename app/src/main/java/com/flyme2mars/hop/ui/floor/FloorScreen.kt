@@ -48,6 +48,7 @@ fun FloorScreen(
     onNewPost: () -> Unit,
     onBlackout: () -> Unit,
     onRequestNearby: () -> Unit,
+    onEnableBluetooth: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
@@ -108,6 +109,17 @@ fun FloorScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = colors.textSecondary,
                 )
+            } else if (nearby.needsBluetooth) {
+                TextButton(
+                    onClick = onEnableBluetooth,
+                    modifier = Modifier.heightIn(min = HopDimens.Touch),
+                ) {
+                    Text(
+                        text = stringResource(R.string.nearby_enable_bluetooth),
+                        color = colors.accent,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
             }
             Spacer(Modifier.height(16.dp))
             HopFilterChips(selected = filter, onSelect = onFilter)

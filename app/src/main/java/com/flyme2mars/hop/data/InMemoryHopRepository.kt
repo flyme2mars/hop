@@ -33,6 +33,7 @@ class InMemoryHopRepository(
         profile: HopProfile,
         authorId: String = selfId,
     ): HopPost {
+        val now = clock()
         val post = HopPost(
             id = idFactory(),
             kind = kind,
@@ -41,7 +42,8 @@ class InMemoryHopRepository(
             authorName = profile.name.trim(),
             authorRoom = profile.room.trim(),
             authorId = authorId,
-            createdAtMillis = clock(),
+            createdAtMillis = now,
+            updatedAtMillis = now,
         )
         posts.add(0, post)
         return post
@@ -50,7 +52,7 @@ class InMemoryHopRepository(
     fun claim(id: String): HopPost? {
         val index = posts.indexOfFirst { it.id == id }
         if (index < 0) return null
-        val claimed = posts[index].copy(claimed = true)
+        val claimed = posts[index].copy(claimed = true, updatedAtMillis = clock())
         posts[index] = claimed
         return claimed
     }

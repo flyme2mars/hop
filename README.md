@@ -6,11 +6,11 @@ No accounts. No internet required for core use.
 ## What this build does
 
 - **Floor board:** Offer / Ask / Note, filter chips, claim, remove own (with confirm).
-- **Persistence:** Room for posts and claim state. DataStore for name, room, floor, keep-screen-on, and a stable self id. First launch seeds the demo posts once; after that the board is real local data and survives restart.
-- **History:** Claimed posts from Room, not a fake list.
-- **Blackout:** Timer starts on enter. I’m OK / Need help stay for that session. Keep-screen-on from Settings is honored. Exit fades back to Floor.
-- **Nearby MVP:** Real BLE advertise + scan for Hop peers on the same floor. The nearby count is live when Bluetooth and permissions allow. Otherwise the UI says Bluetooth off / permission needed / unavailable — never a fake number. Best-effort GATT exchange of a compact post snapshot when two Hop phones can connect. Full mesh gossip is not in this build.
-- **Settings:** Edit name / room / floor (persisted), About Hop, one-line offline help, version.
+- **Persistence:** Room for posts and claim state. DataStore for name, room, floor, keep-screen-on, a stable self id, and blackout session. First launch seeds the demo posts once; after that the board is real local data and survives restart.
+- **History:** Claimed posts from Room.
+- **Blackout:** Timer starts on enter. I’m OK / Need help stay for that session and survive process death. Keep-screen-on from Settings is honored. Exit fades back to Floor.
+- **Nearby (1-hop BLE):** Advertise + scan for Hop peers on the same floor name. Stable peer ids (not rotating MACs). Honest status: searching / N nearby / needs Bluetooth / needs permission. One-tap Allow nearby and Turn on Bluetooth. Two-way chunked GATT exchange of the full board (create / update / claim, newest `updatedAt` wins). Periodic resync while Floor is open. Not a multi-hop mesh. Nearby works in the foreground; Android may stop BLE in the background.
+- **Settings:** Edit name / room / floor (persisted), About Hop, offline help, background BLE limit, version.
 
 ## Open in Android Studio
 
@@ -48,12 +48,25 @@ GitHub Actions builds the same debug APK on every push to `main` and on pull req
 3. Copy the APK to a phone (USB, Drive, or `adb`).
 4. On the phone: enable **Install unknown apps** for the installer you use (Files, Chrome, etc.).
 5. Open the APK and install **Hop**.
-6. On first Floor visit, tap **Allow nearby** if you want a live peer count. Grant Bluetooth (and location on Android 11 and older). Toggle Bluetooth if the subtitle says it is off.
 
 USB sideload from a computer:
 
 ```bash
 adb install -r app-debug.apk
 ```
+
+## Two-phone nearby test
+
+Need two Android phones. No internet. Same Hop APK (`hop-debug`).
+
+1. Sideload Hop on both phones and keep both **on Floor** (app open, screen on).
+2. On each phone, enter a **name**, **room**, and the **same Floor** (example: `2`). Tap Continue / Save.
+3. Grant nearby Bluetooth when asked (location only on Android 11 and older). If the subtitle says **needs Bluetooth**, tap **Turn on Bluetooth**.
+4. Hold the phones a few meters apart. Within about 15 seconds the subtitle should show **1 nearby** on each — never a made-up number. A third Hop phone on that floor should make it **2 nearby**. A phone on a different floor name must not count.
+5. On phone A, create an Offer (title + body) and wait up to ~15 seconds. The same post should appear on phone B’s Floor without internet.
+6. On phone B, Claim that offer. On phone A it should move to History after the next sync.
+7. Force-stop Hop on phone A and reopen. The local post and claim state are still there (Room). Nearby starts again only while the app is open.
+
+If count stays **searching**, confirm both are on Floor, same floor name, Bluetooth on, and permissions granted. Hop does not scan in the background.
 
 Debug builds are unsigned for Play Store use; they are meant for personal install and CI verification only.

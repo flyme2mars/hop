@@ -42,6 +42,7 @@ data class HopPost(
     val authorRoom: String,
     val authorId: String,
     val createdAtMillis: Long,
+    val updatedAtMillis: Long = createdAtMillis,
     val claimed: Boolean = false,
 )
 
@@ -64,11 +65,13 @@ data class NearbyState(
 ) {
     val needsPermission: Boolean get() = availability == NearbyAvailability.PermissionNeeded
 
+    val needsBluetooth: Boolean get() = availability == NearbyAvailability.BluetoothOff
+
     fun statusLine(): String = when (availability) {
-        NearbyAvailability.Ready -> "$count nearby"
-        NearbyAvailability.BluetoothOff -> "Bluetooth off"
-        NearbyAvailability.PermissionNeeded -> "Nearby permission needed"
+        NearbyAvailability.Ready -> if (count > 0) "$count nearby" else "searching"
+        NearbyAvailability.BluetoothOff -> "needs Bluetooth"
+        NearbyAvailability.PermissionNeeded -> "needs permission"
         NearbyAvailability.Unavailable -> "Nearby unavailable"
-        NearbyAvailability.Checking -> "Nearby…"
+        NearbyAvailability.Checking -> "searching"
     }
 }

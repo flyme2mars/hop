@@ -27,6 +27,13 @@ object HopBleIds {
         return payload.copyOfRange(2, 10).contentEquals(expected)
     }
 
+    fun peerId(payload: ByteArray?): String? {
+        if (payload == null || payload.size < 10) return null
+        return payload.copyOfRange(2, 10).joinToString("") { byte ->
+            "%02x".format(byte.toInt() and 0xFF)
+        }
+    }
+
     private fun sha(value: String, length: Int): ByteArray {
         val digest = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
         return digest.copyOf(length)

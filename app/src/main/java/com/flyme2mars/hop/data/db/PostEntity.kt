@@ -15,6 +15,7 @@ data class PostEntity(
     val authorRoom: String,
     val authorId: String,
     val createdAtMillis: Long,
+    val updatedAtMillis: Long,
     val claimed: Boolean,
 )
 
@@ -29,6 +30,7 @@ fun PostEntity.toModel(): HopPost? {
         authorRoom = authorRoom,
         authorId = authorId,
         createdAtMillis = createdAtMillis,
+        updatedAtMillis = if (updatedAtMillis > 0L) updatedAtMillis else createdAtMillis,
         claimed = claimed,
     )
 }
@@ -42,5 +44,6 @@ fun HopPost.toEntity(): PostEntity = PostEntity(
     authorRoom = authorRoom,
     authorId = authorId,
     createdAtMillis = createdAtMillis,
+    updatedAtMillis = if (updatedAtMillis > 0L) updatedAtMillis else createdAtMillis,
     claimed = claimed,
 )

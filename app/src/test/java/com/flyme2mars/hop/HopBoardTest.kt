@@ -12,6 +12,7 @@ import com.flyme2mars.hop.data.formatElapsed
 import com.flyme2mars.hop.data.formatRelativeTime
 import com.flyme2mars.hop.data.mergeRemotePost
 import com.flyme2mars.hop.data.nearby.HopBleIds
+import com.flyme2mars.hop.data.nearby.HopSyncFramer
 import com.flyme2mars.hop.data.nearby.PeerPresenceTracker
 import com.flyme2mars.hop.ui.floor.buildFloorSubtitle
 import org.junit.Assert.assertEquals
@@ -72,13 +73,30 @@ class HopBoardTest {
     }
 
     @Test
-    fun merge_remote_claim_keeps_local_copy() {
+    fun merge_equal_timestamp_keeps_local_and_unions_claim() {
         val repo = InMemoryHopRepository(seed = emptyList(), idFactory = { "local-1" })
         val local = repo.addPost(PostKind.Offer, "Rice", "One pot.", profile)
         repo.ingestRemote(listOf(local.copy(claimed = true, title = "Ignored")))
         val merged = repo.historyPosts().first()
         assertTrue(merged.claimed)
         assertEquals("Rice", merged.title)
+    }
+
+    @Test
+    fun merge_newest_wins_and_is_idempotent() {
+        val older = defaultSeedPosts(now = 1_000L).first().copy(
+            title = "Old title",
+            updatedAtMillis = 1_000L,
+        )
+        val newer = older.copy(title = "New title", claimed = true, updatedAtMillis = 2_000L)
+        assertEquals(newer, mergeRemotePost(older, newer))
+        assertEquals(newer, mergeRemotePost(newer, older))
+        assertEquals(newer, mergeRemotePost(newer, newer))
+        val repo = InMemoryHopRepository(seed = listOf(older))
+        repo.ingestRemote(listOf(newer))
+        repo.ingestRemote(listOf(newer))
+        assertEquals("New title", repo.historyPosts().single().title)
+        assertTrue(repo.historyPosts().single().claimed)
     }
 
     @Test
@@ -106,39 +124,67 @@ class HopBoardTest {
             buildFloorSubtitle(profile, NearbyState(count = 2, availability = NearbyAvailability.Ready)),
         )
         assertEquals(
-            "209 · Leah · 0 nearby",
+            "209 · Leah · searching",
             buildFloorSubtitle(profile, NearbyState(count = 0, availability = NearbyAvailability.Ready)),
         )
         assertEquals(
-            "209 · Leah · Bluetooth off",
+            "209 · Leah · needs Bluetooth",
             buildFloorSubtitle(profile, NearbyState(availability = NearbyAvailability.BluetoothOff)),
         )
         assertEquals(
-            "209 · Leah · Nearby permission needed",
+            "209 · Leah · needs permission",
             buildFloorSubtitle(profile, NearbyState(availability = NearbyAvailability.PermissionNeeded)),
         )
     }
 
     @Test
-    fun sync_codec_round_trip() {
-        val original = defaultSeedPosts(now = 1_700_000_000_000L).first()
+    fun sync_codec_round_trip_full_posts() {
+        val original = defaultSeedPosts(now = 1_700_000_000_000L).first().copy(
+            body = "A longer body that used to be clipped in the toy snapshot.",
+            updatedAtMillis = 1_700_000_100_000L,
+        )
         val encoded = HopSyncCodec.encode(listOf(original))
         val decoded = HopSyncCodec.decode(encoded)
         assertEquals(1, decoded.size)
-        assertEquals(original.id, decoded.first().id)
-        assertEquals(original.kind, decoded.first().kind)
-        assertEquals(original.title, decoded.first().title)
+        assertEquals(original, decoded.first())
+        assertTrue(String(encoded, Charsets.UTF_8).startsWith("HOP2"))
+        val legacy = "HOP1\nseed-1|Offer|Rice|One pot.|Priya|204|priya|1700000000000|0"
+        val fromV1 = HopSyncCodec.decode(legacy.toByteArray())
+        assertEquals("seed-1", fromV1.single().id)
+        assertEquals(1_700_000_000_000L, fromV1.single().updatedAtMillis)
         assertTrue(HopSyncCodec.decode("nope".toByteArray()).isEmpty())
     }
 
     @Test
-    fun peer_tracker_expires() {
+    fun sync_framer_chunks_and_reassembles() {
+        val payload = HopSyncCodec.encode(defaultSeedPosts(now = 1_700_000_000_000L))
+        val chunks = HopSyncFramer.chunk(payload, maxChunkPayload = 40)
+        assertTrue(chunks.size > 1)
+        val assembler = HopSyncFramer.Assembler()
+        var assembled: ByteArray? = null
+        chunks.forEach { chunk ->
+            assembled = assembler.add(chunk) ?: assembled
+        }
+        val complete = assembled
+        assertTrue(complete != null)
+        assertEquals(payload.toList(), complete?.toList())
+        assertEquals(
+            HopSyncCodec.decode(payload),
+            HopSyncCodec.decode(complete ?: ByteArray(0)),
+        )
+        assertTrue(HopSyncFramer.isRequest(HopSyncFramer.request()))
+        assertTrue(HopSyncFramer.chunk(ByteArray(0)).size == 1)
+    }
+
+    @Test
+    fun peer_tracker_uses_stable_ids_and_ttl() {
         var now = 1_000L
-        val tracker = PeerPresenceTracker(ttlMillis = 20_000, clock = { now })
-        tracker.mark("aa:bb")
-        now = 10_000L
+        val tracker = PeerPresenceTracker(ttlMillis = 45_000, clock = { now })
+        assertTrue(tracker.mark("peer-a"))
+        assertFalse(tracker.mark("peer-a"))
+        now = 20_000L
         assertEquals(1, tracker.count())
-        now = 22_000L
+        now = 46_100L
         assertEquals(0, tracker.count())
     }
 
@@ -150,5 +196,7 @@ class HopBoardTest {
         assertFalse(HopBleIds.sameFloor(payload, "3"))
         assertTrue(HopBleIds.isSelf(payload, "me-1"))
         assertFalse(HopBleIds.isSelf(payload, "other"))
+        assertEquals(HopBleIds.peerId(payload), HopBleIds.peerId(HopBleIds.presencePayload("2", "me-1")))
+        assertTrue(HopBleIds.peerId(payload) != HopBleIds.peerId(HopBleIds.presencePayload("2", "other")))
     }
 }

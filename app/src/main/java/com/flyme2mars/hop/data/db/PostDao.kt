@@ -26,8 +26,8 @@ interface PostDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIgnore(entity: PostEntity)
 
-    @Query("UPDATE posts SET claimed = 1 WHERE id = :id")
-    suspend fun markClaimed(id: String)
+    @Query("UPDATE posts SET claimed = 1, updatedAtMillis = :updatedAtMillis WHERE id = :id")
+    suspend fun markClaimed(id: String, updatedAtMillis: Long)
 
     @Query("DELETE FROM posts WHERE id = :id")
     suspend fun delete(id: String)

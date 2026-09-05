@@ -33,6 +33,7 @@ class RoomHopRepository(
         profile: HopProfile,
         authorId: String,
     ): HopPost {
+        val now = clock()
         val post = HopPost(
             id = idFactory(),
             kind = kind,
@@ -41,7 +42,8 @@ class RoomHopRepository(
             authorName = profile.name.trim(),
             authorRoom = profile.room.trim(),
             authorId = authorId,
-            createdAtMillis = clock(),
+            createdAtMillis = now,
+            updatedAtMillis = now,
         )
         dao.upsert(post.toEntity())
         return post
@@ -49,8 +51,9 @@ class RoomHopRepository(
 
     suspend fun claim(id: String): HopPost? {
         val existing = dao.getById(id)?.toModel() ?: return null
-        dao.markClaimed(id)
-        return existing.copy(claimed = true)
+        val now = clock()
+        dao.markClaimed(id, now)
+        return existing.copy(claimed = true, updatedAtMillis = now)
     }
 
     suspend fun remove(id: String, requesterId: String): Boolean {
@@ -64,10 +67,8 @@ class RoomHopRepository(
         remotePosts.forEach { remote ->
             val local = dao.getById(remote.id)?.toModel()
             val merged = mergeRemotePost(local, remote)
-            if (local == null) {
-                dao.insertIgnore(merged.toEntity())
-            } else if (merged.claimed && !local.claimed) {
-                dao.markClaimed(local.id)
+            if (merged != local) {
+                dao.upsert(merged.toEntity())
             }
         }
     }
