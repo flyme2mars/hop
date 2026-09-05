@@ -41,7 +41,7 @@ Writes `Hop-OffGrid.pptx` and `Hop-OffGrid.pdf` next to the script. PNG previews
 
 Paper `#F5F3EF`, charcoal title/close `#121212`, panels `#EEECE8` with no stroke or shadow. Ink is charcoal, not black. Kickers and footer are mid gray.
 
-Serif (Libre Baskerville) for slide titles and italic labels. Inter for body, kickers, and footer. Three sizes only: 32 / 16 / 11 pt. Footer is `AKSHAI KRISHNA S` left, `NN / 09` right.
+Serif (Libre Baskerville) for slide titles and italic labels. Inter for body, kickers, and footer. Three sizes only: 32 / 16 / 11 pt. Footer is `AKSHAI KRISHNA S` left, `NN / 09` right. Kickers use `01 · PROBLEM` spacing. One left edge and even panel gaps on every paper slide.
 
 `generate_deck.py` loads the five PNGs from `screenshots/` and places them on two dedicated slides. No invented UI.
 

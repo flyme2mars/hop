@@ -34,8 +34,20 @@ SLIDE_H_EMU = 6_858_000
 SLIDE_W = SLIDE_W_EMU / 914_400
 SLIDE_H = SLIDE_H_EMU / 914_400
 
-# ~0.6 in margins
+# ~0.6 in margins — one left edge for every slide
 M = 0.60
+CONTENT_W = SLIDE_W - 2 * M
+
+# Vertical rhythm (paper slides)
+KICKER_Y = 0.60
+KICKER_H = 0.22
+TITLE_Y = 0.96
+TITLE_H = 0.56
+CONTENT_Y = 1.68
+CONTENT_H = 4.98  # ends 6.66; footer at 6.94
+FOOTER_Y = 6.94
+GAP = 0.14
+PAD = 0.22
 
 # Locked type sizes (do not shrink per slide)
 TITLE_PT = 32
@@ -130,33 +142,35 @@ def kicker_footer(n: int, total: int, kicker: str, dark: bool) -> list[TextBox]:
     mute = MUTED_DARK if dark else MUTED
     page = f"{n:02d} / {total:02d}"
     return [
-        TextBox(M, M, 10.0, 0.26, kicker, "sans", "meta", mute, tracking=160),
-        TextBox(M, 6.92, 7.4, 0.26, "AKSHAI KRISHNA S", "sans", "meta", mute, tracking=120),
-        TextBox(5.93, 6.92, 6.80, 0.26, page, "sans", "meta", mute, align="right", tracking=120),
+        TextBox(M, KICKER_Y, 10.0, KICKER_H, kicker, "sans", "meta", mute, tracking=160),
+        TextBox(M, FOOTER_Y, 7.4, 0.26, "AKSHAI KRISHNA S", "sans", "meta", mute, tracking=120),
+        TextBox(M, FOOTER_Y, CONTENT_W, 0.26, page, "sans", "meta", mute, align="right", tracking=120),
     ]
 
 
 def paper_title(title: str) -> TextBox:
-    return TextBox(M, 0.98, 12.13, 0.58, title, "serif", "title", INK)
+    return TextBox(M, TITLE_Y, CONTENT_W, TITLE_H, title, "serif", "title", INK)
+
+
+def hairline(x: float, y: float, w: float, h: float, fill: tuple[int, int, int]) -> Rect:
+    return Rect(x, y, w, h, fill, radius=0)
 
 
 def stack_panels(
     items: Sequence[tuple[str, str]],
-    top: float = 1.74,
-    height: float = 4.92,
-    gap: float = 0.14,
+    top: float = CONTENT_Y,
+    height: float = CONTENT_H,
+    gap: float = GAP,
 ) -> tuple[list[Rect], list[TextBox]]:
     n = len(items)
     ph = (height - gap * (n - 1)) / n
-    width = SLIDE_W - 2 * M
     rects: list[Rect] = []
     texts: list[TextBox] = []
-    pad = 0.22
     for i, (label, body) in enumerate(items):
         y = top + i * (ph + gap)
-        rects.append(Rect(M, y, width, ph, PANEL))
-        texts.append(TextBox(M + pad, y + 0.18, width - 2 * pad, 0.24, label, "serif-italic", "meta", MUTED))
-        texts.append(TextBox(M + pad, y + 0.46, width - 2 * pad, ph - 0.64, body, "sans", "body", INK))
+        rects.append(Rect(M, y, CONTENT_W, ph, PANEL))
+        texts.append(TextBox(M + PAD, y + 0.16, CONTENT_W - 2 * PAD, 0.22, label, "serif-italic", "meta", MUTED))
+        texts.append(TextBox(M + PAD, y + 0.42, CONTENT_W - 2 * PAD, ph - 0.56, body, "sans", "body", INK))
     return rects, texts
 
 
@@ -164,15 +178,13 @@ def grid_panels(
     items: Sequence[tuple[str, str]],
     cols: int,
     rows: int,
-    top: float = 1.74,
-    height: float = 4.92,
-    gap: float = 0.16,
+    top: float = CONTENT_Y,
+    height: float = CONTENT_H,
+    gap: float = GAP,
 ) -> tuple[list[Rect], list[TextBox]]:
     assert len(items) == cols * rows
-    width = SLIDE_W - 2 * M
-    cw = (width - gap * (cols - 1)) / cols
+    cw = (CONTENT_W - gap * (cols - 1)) / cols
     ch = (height - gap * (rows - 1)) / rows
-    pad = 0.22
     rects: list[Rect] = []
     texts: list[TextBox] = []
     for i, (label, body) in enumerate(items):
@@ -180,13 +192,8 @@ def grid_panels(
         x = M + c * (cw + gap)
         y = top + r * (ch + gap)
         rects.append(Rect(x, y, cw, ch, PANEL))
-        if label:
-            texts.append(TextBox(x + pad, y + 0.20, cw - 2 * pad, 0.26, label, "serif-italic", "meta", MUTED))
-            texts.append(TextBox(x + pad, y + 0.52, cw - 2 * pad, ch - 0.74, body, "sans", "body", INK))
-        else:
-            texts.append(
-                TextBox(x + pad, y + 0.28, cw - 2 * pad, ch - 0.56, body, "sans", "body", INK, valign="middle")
-            )
+        texts.append(TextBox(x + PAD, y + 0.14, cw - 2 * PAD, 0.22, label, "serif-italic", "meta", MUTED))
+        texts.append(TextBox(x + PAD, y + 0.40, cw - 2 * PAD, ch - 0.54, body, "sans", "body", INK))
     return rects, texts
 
 
@@ -205,14 +212,15 @@ def phone_aspect(path: Path) -> float:
     return w / h
 
 
-def phone_row(
+def phone_band(
     items: Sequence[tuple[str, str]],
-    top: float = 1.74,
-    height: float = 4.96,
-    gap: float = 0.36,
+    notes: Sequence[tuple[str, str]],
+    top: float = CONTENT_Y,
+    height: float = CONTENT_H,
+    gap: float = 0.20,
 ) -> tuple[list[ImageBox], list[TextBox]]:
-    """Centered row of real device shots with italic labels. No frames."""
-    label_h = 0.30
+    """Left-aligned real shots + a fact column. Same phone height every time."""
+    label_h = 0.28
     phone_h = height - label_h
     images: list[ImageBox] = []
     texts: list[TextBox] = []
@@ -221,44 +229,43 @@ def phone_row(
         path = shot(name)
         pw = phone_h * phone_aspect(path)
         sized.append((path, label, pw, phone_h))
-    total_w = sum(pw for _, _, pw, _ in sized) + gap * (len(sized) - 1)
-    x = (SLIDE_W - total_w) / 2
+    x = M
     for path, label, pw, ph in sized:
         images.append(ImageBox(x, top, pw, ph, path))
-        texts.append(
-            TextBox(x - 0.08, top + ph + 0.04, pw + 0.16, 0.26, label, "serif-italic", "meta", MUTED, align="center")
-        )
+        texts.append(TextBox(x, top + ph + 0.04, pw, 0.24, label, "serif-italic", "meta", MUTED))
         x += pw + gap
+    note_x = x + 0.16
+    note_w = (M + CONTENT_W) - note_x
+    note_step = (height - 0.16) / max(len(notes), 1)
+    ny = top + 0.08
+    for label, body in notes:
+        texts.append(TextBox(note_x, ny, note_w, 0.24, label, "serif-italic", "meta", MUTED))
+        texts.append(TextBox(note_x, ny + 0.28, note_w, min(0.96, note_step - 0.36), body, "sans", "body", INK))
+        ny += note_step
     return images, texts
 
 
-def two_col_lists(
-    left: Sequence[tuple[str, str]],
-    right: Sequence[tuple[str, str]],
-    top: float = 1.74,
-    height: float = 4.92,
-    gap: float = 0.16,
+def dark_identity(
+    word: str,
+    tagline: str,
+    facts: Sequence[str],
 ) -> tuple[list[Rect], list[TextBox]]:
-    width = SLIDE_W - 2 * M
-    cw = (width - gap) / 2
-    pad_x = 0.26
-    pad_y = 0.24
-    rects = [
-        Rect(M, top, cw, height, PANEL),
-        Rect(M + cw + gap, top, cw, height, PANEL),
+    """Two-column charcoal opener / closer. Same type sizes as paper slides."""
+    left_w = 6.55
+    rule_x = M + left_w + 0.28
+    right_x = rule_x + 0.28
+    right_w = (M + CONTENT_W) - right_x
+    block_y = 2.18
+    texts = [
+        TextBox(M, block_y, left_w, TITLE_H, word, "serif", "title", CREAM),
+        TextBox(M, block_y + 0.62, left_w, 0.40, tagline, "serif-italic", "body", CREAM),
     ]
-    texts: list[TextBox] = []
-
-    def fill(x: float, items: Sequence[tuple[str, str]]) -> None:
-        inner_h = height - 2 * pad_y
-        row_h = inner_h / len(items)
-        for i, (label, body) in enumerate(items):
-            y = top + pad_y + i * row_h
-            texts.append(TextBox(x + pad_x, y + 0.04, cw - 2 * pad_x, 0.22, label, "serif-italic", "meta", MUTED))
-            texts.append(TextBox(x + pad_x, y + 0.28, cw - 2 * pad_x, row_h - 0.36, body, "sans", "body", INK))
-
-    fill(M, left)
-    fill(M + cw + gap, right)
+    fy = block_y
+    for line in facts:
+        texts.append(TextBox(right_x, fy, right_w, 0.36, line, "sans", "body", MUTED_DARK))
+        fy += 0.42
+    rule_h = max(1.02, fy - block_y - 0.06)
+    rects = [hairline(rule_x, block_y, 0.012, rule_h, MUTED_DARK)]
     return rects, texts
 
 
@@ -267,17 +274,23 @@ def build_slides() -> list[SlideSpec]:
     slides: list[SlideSpec] = []
 
     # 1. Title
-    t1 = SlideSpec("title", DARK, texts=kicker_footer(1, total, "01  ·  OFFGRID", dark=True))
-    t1.texts += [
-        TextBox(M, 2.28, 12.13, 0.58, "Hop", "serif", "title", CREAM),
-        TextBox(M, 2.96, 12.13, 0.40, "Your floor, offline.", "serif-italic", "body", CREAM),
-        TextBox(M, 3.92, 12.13, 0.30, "OffGrid  ·  solo  ·  open source", "sans", "body", MUTED_DARK),
-        TextBox(M, 4.30, 12.13, 0.30, "github.com/flyme2mars/hop", "sans", "body", MUTED_DARK),
-    ]
+    t1 = SlideSpec("title", DARK, texts=kicker_footer(1, total, "01 · OFFGRID", dark=True))
+    r, tx = dark_identity(
+        "Hop",
+        "Your floor, offline.",
+        [
+            "OffGrid",
+            "Solo",
+            "Open source",
+            "github.com/flyme2mars/hop",
+        ],
+    )
+    t1.rects += r
+    t1.texts += tx
     slides.append(t1)
 
     # 2. Problem
-    t2 = SlideSpec("problem", PAPER, texts=kicker_footer(2, total, "02  ·  PROBLEM", dark=False))
+    t2 = SlideSpec("problem", PAPER, texts=kicker_footer(2, total, "02 · PROBLEM", dark=False))
     t2.texts.append(paper_title("Hostel floors lose the network."))
     r, tx = stack_panels(
         [
@@ -291,7 +304,7 @@ def build_slides() -> list[SlideSpec]:
     slides.append(t2)
 
     # 3. Solution
-    t3 = SlideSpec("solution", PAPER, texts=kicker_footer(3, total, "03  ·  SOLUTION", dark=False))
+    t3 = SlideSpec("solution", PAPER, texts=kicker_footer(3, total, "03 · SOLUTION", dark=False))
     t3.texts.append(paper_title("A floor board with no internet."))
     r, tx = stack_panels(
         [
@@ -314,97 +327,111 @@ def build_slides() -> list[SlideSpec]:
     slides.append(t3)
 
     # 4. Features
-    t4 = SlideSpec("features", PAPER, texts=kicker_footer(4, total, "04  ·  FEATURES", dark=False))
-    t4.texts.append(paper_title("Setup, board, blackout, nearby sync."))
-    r, tx = two_col_lists(
+    t4 = SlideSpec("features", PAPER, texts=kicker_footer(4, total, "04 · FEATURES", dark=False))
+    t4.texts.append(paper_title("Board, blackout, and nearby sync."))
+    r, tx = grid_panels(
         [
-            ("Setup", "Name, room, floor."),
-            ("Floor board", "Board with filters."),
-            ("Claim", "Claim posts."),
+            ("Setup", "Set name, room, and floor."),
+            ("Floor board", "Floor board with filters."),
+            ("Claim", "Claim posts on the floor."),
             ("History", "History of posts."),
-        ],
-        [
-            ("Settings", "Settings."),
+            ("Settings", "App settings."),
             ("Blackout mode", "Full black screen with a timer and I’m OK / Need help."),
-            ("Bluetooth nearby sync", "Same floor, when the app is open."),
+            ("Nearby sync", "Bluetooth nearby sync, same floor, when the app is open."),
             ("Offline alone", "Fully usable offline alone."),
         ],
+        cols=2,
+        rows=4,
     )
     t4.rects += r
     t4.texts += tx
     slides.append(t4)
 
     # 5. Screens — first open, floor, new post
-    t5 = SlideSpec("board", PAPER, texts=kicker_footer(5, total, "05  ·  SCREENS", dark=False))
+    t5 = SlideSpec("board", PAPER, texts=kicker_footer(5, total, "05 · SCREENS", dark=False))
     t5.texts.append(paper_title("The floor board."))
-    imgs, labels = phone_row(
+    imgs, labels = phone_band(
         [
             ("launch", "First open"),
             ("floor", "Floor"),
             ("sheet", "New post"),
         ],
-        gap=0.34,
+        [
+            ("First open", "Set name, room, and floor."),
+            ("Floor", "Offer / Ask / Note board, with filters. Claim posts."),
+            ("New post", "Write an Offer, Ask, or Note."),
+        ],
     )
     t5.images += imgs
     t5.texts += labels
     slides.append(t5)
 
     # 6. Screens — blackout and nearby
-    t6 = SlideSpec("states", PAPER, texts=kicker_footer(6, total, "06  ·  SCREENS", dark=False))
+    t6 = SlideSpec("states", PAPER, texts=kicker_footer(6, total, "06 · SCREENS", dark=False))
     t6.texts.append(paper_title("Blackout, and nearby."))
-    imgs, labels = phone_row(
+    imgs, labels = phone_band(
         [
             ("blackout", "Blackout"),
             ("nearby", "Nearby"),
         ],
-        gap=0.55,
+        [
+            (
+                "Blackout",
+                "A full black screen with a timer, and I’m OK / Need help.",
+            ),
+            (
+                "Nearby",
+                "Bluetooth nearby sync on the same floor, when the app is open. Fully usable offline alone.",
+            ),
+        ],
     )
     t6.images += imgs
     t6.texts += labels
     slides.append(t6)
 
     # 7. Tech
-    t7 = SlideSpec("stack", PAPER, texts=kicker_footer(7, total, "07  ·  STACK", dark=False))
+    t7 = SlideSpec("stack", PAPER, texts=kicker_footer(7, total, "07 · STACK", dark=False))
     t7.texts.append(paper_title("What it is built with."))
-    r, tx = grid_panels(
+    r, tx = stack_panels(
         [
-            ("App", "Kotlin. Jetpack Compose. Material 3."),
-            ("Local store", "Room. DataStore."),
+            ("App", "Kotlin, Jetpack Compose, and Material 3."),
+            ("Local store", "Room and DataStore."),
             ("Nearby", "BLE advertise / scan + GATT sync."),
             ("Build", "GitHub Actions debug APK."),
-        ],
-        cols=2,
-        rows=2,
+        ]
     )
     t7.rects += r
     t7.texts += tx
     slides.append(t7)
 
     # 8. Future
-    t8 = SlideSpec("future", PAPER, texts=kicker_footer(8, total, "08  ·  FUTURE", dark=False))
+    t8 = SlideSpec("future", PAPER, texts=kicker_footer(8, total, "08 · FUTURE", dark=False))
     t8.texts.append(paper_title("After the first floor."))
-    r, tx = grid_panels(
+    r, tx = stack_panels(
         [
             ("Mesh", "Stronger multi-hop mesh."),
             ("Peers", "Better peer UX."),
             ("Background", "Background limits / battery."),
             ("iOS", "iOS if ever needed."),
-        ],
-        cols=2,
-        rows=2,
+        ]
     )
     t8.rects += r
     t8.texts += tx
     slides.append(t8)
 
     # 9. Close
-    t9 = SlideSpec("close", DARK, texts=kicker_footer(9, total, "09  ·  OFFGRID", dark=True))
-    t9.texts += [
-        TextBox(M, 2.28, 12.13, 0.58, "Hop", "serif", "title", CREAM),
-        TextBox(M, 2.96, 12.13, 0.40, "Your floor, offline.", "serif-italic", "body", CREAM),
-        TextBox(M, 3.92, 12.13, 0.30, "github.com/flyme2mars/hop", "sans", "body", MUTED_DARK),
-        TextBox(M, 4.30, 12.13, 0.30, "Solo OffGrid entry  ·  open source", "sans", "body", MUTED_DARK),
-    ]
+    t9 = SlideSpec("close", DARK, texts=kicker_footer(9, total, "09 · OFFGRID", dark=True))
+    r, tx = dark_identity(
+        "Hop",
+        "Your floor, offline.",
+        [
+            "github.com/flyme2mars/hop",
+            "Solo OffGrid entry",
+            "Open source",
+        ],
+    )
+    t9.rects += r
+    t9.texts += tx
     slides.append(t9)
 
     return slides
@@ -436,17 +463,20 @@ def add_textbox(slide, box: TextBox) -> None:
     tf.margin_bottom = Inches(0)
     tf.anchor = MSO_ANCHOR.MIDDLE if box.valign == "middle" else MSO_ANCHOR.TOP
 
-    p = tf.paragraphs[0]
-    p.alignment = {"left": PP_ALIGN.LEFT, "right": PP_ALIGN.RIGHT, "center": PP_ALIGN.CENTER}[box.align]
-    p.clear()
-    run = p.add_run()
-    run.text = box.text
-    _set_run(run, box.face, box.role, box.color, box.tracking)
-
-    pPr = p._p.get_or_add_pPr()
-    ln = etree.SubElement(pPr, qn("a:lnSpc"))
-    spc_pct = etree.SubElement(ln, qn("a:spcPct"))
-    spc_pct.set("val", "120000" if box.role == "title" else "135000" if box.role == "body" else "120000")
+    align = {"left": PP_ALIGN.LEFT, "right": PP_ALIGN.RIGHT, "center": PP_ALIGN.CENTER}[box.align]
+    parts = box.text.split("\n") or [""]
+    for i, part in enumerate(parts):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.alignment = align
+        if i == 0:
+            p.clear()
+        run = p.add_run()
+        run.text = part
+        _set_run(run, box.face, box.role, box.color, box.tracking)
+        pPr = p._p.get_or_add_pPr()
+        ln = etree.SubElement(pPr, qn("a:lnSpc"))
+        spc_pct = etree.SubElement(ln, qn("a:spcPct"))
+        spc_pct.set("val", "120000" if box.role == "title" else "135000" if box.role == "body" else "120000")
 
 
 def add_rect(slide, rect: Rect) -> None:
@@ -640,18 +670,22 @@ def _embed_fonts(path: Path) -> None:
 def _wrap_lines(text: str, font, max_width_px: float) -> list[str]:
     if not text:
         return [""]
-    words = text.split()
     lines: list[str] = []
-    cur: list[str] = []
-    for word in words:
-        trial = (" ".join(cur + [word])).strip()
-        if font.getlength(trial) <= max_width_px or not cur:
-            cur.append(word)
-        else:
+    for block in text.split("\n"):
+        words = block.split()
+        cur: list[str] = []
+        if not words:
+            lines.append("")
+            continue
+        for word in words:
+            trial = (" ".join(cur + [word])).strip()
+            if font.getlength(trial) <= max_width_px or not cur:
+                cur.append(word)
+            else:
+                lines.append(" ".join(cur))
+                cur = [word]
+        if cur:
             lines.append(" ".join(cur))
-            cur = [word]
-    if cur:
-        lines.append(" ".join(cur))
     return lines or [""]
 
 
@@ -696,6 +730,17 @@ def render_qa(slides: Sequence[SlideSpec], out_dir: Path, dpi: int = 144) -> lis
         ):
             if overlap(inch_box(a), inch_box(b)):
                 issues.append(f"slide {i} overlapping panels")
+        panels = [r for r in spec.rects if r.h > 0.05 and r.w > 0.05]
+        xs = sorted({round(r.x, 3) for r in panels})
+        if len(xs) >= 2:
+            col_gaps = [xs[j + 1] - xs[j] for j in range(len(xs) - 1)]
+            if max(col_gaps) - min(col_gaps) > 0.02:
+                issues.append(f"slide {i} uneven columns: {col_gaps}")
+        ys = sorted({round(r.y, 3) for r in panels})
+        if len(ys) >= 3:
+            row_gaps = [ys[j + 1] - ys[j] for j in range(len(ys) - 1)]
+            if max(row_gaps) - min(row_gaps) > 0.02:
+                issues.append(f"slide {i} uneven row rhythm: {row_gaps}")
         for img in spec.images:
             if img.x < -0.01 or img.y < -0.01 or img.x + img.w > SLIDE_W + 0.01 or img.y + img.h > SLIDE_H + 0.01:
                 issues.append(f"slide {i} image outside slide: {img.path.name}")
