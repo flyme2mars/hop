@@ -10,6 +10,23 @@ Hackathon presentation for Hop. Quiet seminar-bar slides, not a pitch template.
 | `Hop-OffGrid.pdf` | Same layout, fonts embedded |
 | `generate_deck.py` | Source of truth for both |
 | `fonts/` | Inter + Libre Baskerville (OFL) |
+| `screenshots/` | Night-stage Hop UI stills for the deck |
+
+## Screenshots
+
+Sharp 1080×2400 PNGs of the live night-stage composables from PR #6 head `27e579c` (`cursor/hop-offline-board-1207`).
+
+| File | Screen |
+| --- | --- |
+| `screenshots/launch.png` | Launch / setup — Name / Room / Floor |
+| `screenshots/floor.png` | Floor board with seed posts visible |
+| `screenshots/sheet.png` | New post sheet open over the floor |
+| `screenshots/blackout.png` | Blackout / power cut |
+| `screenshots/nearby.png` | Floor with Nobody nearby + empty peer list |
+
+**How captured:** Compose Preview Screenshot Testing of the real #6 composables (`LaunchScreen`, `FloorScreen` + home chrome, New post sheet body, `BlackoutScreen`), forced `HopTheme(darkTheme = true)`. Seed posts are `defaultSeedPosts()` from `HopBoard.kt`. Nearby is an honest Ready + empty peer list (`Nobody nearby` / `searching`).
+
+This VM has `/dev/kvm` but nested KVM hits a kernel BUG, so hardware emulation dies. Software TCG did boot an ATD image and install the PR #6 CI APK (`adb` tree showed Hop / Name / Room / Floor), but `screencap` stayed a black framebuffer. A windowed Pixel 6 Google APIs AVD was still a grey boot after several minutes of TCG. Host-side LayoutLib is the honest fallback — not invented mockups. `ModalBottomSheet` popups do not paint in LayoutLib, so `sheet.png` uses the same New post body widgets (`HopChip`, `HopTextField`, Post) on the M3 sheet surface + scrim over the floor.
 
 ## Generate
 
