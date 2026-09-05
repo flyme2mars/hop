@@ -331,10 +331,6 @@ class HopNearbyController(
             val payload = result.scanRecord?.getServiceData(ParcelUuid(HopBleIds.SERVICE_UUID))
             val floor = floorProvider()
             val selfId = selfIdProvider()
-            if (isOwnAdapter(device)) {
-                Log.d(TAG, "drop ${device.address}: adapter self MAC")
-                return
-            }
             val evaluation = HopBleIds.evaluate(payload, floor, selfId)
             if (!evaluation.accepted) {
                 Log.d(TAG, "drop ${device.address}: ${evaluation.reason}")
@@ -697,12 +693,6 @@ class HopNearbyController(
         if (changed) publish()
     }
 
-    private fun isOwnAdapter(device: BluetoothDevice): Boolean {
-        val address = runCatching { adapter()?.address }.getOrNull() ?: return false
-        if (address.isBlank() || address == HIDDEN_ADAPTER_ADDRESS) return false
-        return device.address.equals(address, ignoreCase = true)
-    }
-
     private fun markSynced(gatt: BluetoothGatt?) {
         val address = gatt?.device?.address
         val peerId = activePeerId
@@ -751,7 +741,6 @@ class HopNearbyController(
     private companion object {
         const val TAG = "HopNearby"
         const val RESYNC_MS = 15_000L
-        const val HIDDEN_ADAPTER_ADDRESS = "02:00:00:00:00:00"
         val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     }
 }
