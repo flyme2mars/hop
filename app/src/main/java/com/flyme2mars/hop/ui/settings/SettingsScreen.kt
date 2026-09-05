@@ -156,7 +156,7 @@ fun SettingsScreen(
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Help on this floor stays here when the network is gone.",
+            text = "Works offline. No account. Nearby uses Bluetooth on this floor only.",
             style = MaterialTheme.typography.bodyLarge,
             color = colors.textSecondary,
         )

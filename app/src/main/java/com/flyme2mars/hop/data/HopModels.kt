@@ -13,6 +13,20 @@ enum class PostFilter {
     Note,
 }
 
+enum class BlackoutStatus {
+    None,
+    Ok,
+    Help,
+}
+
+enum class NearbyAvailability {
+    Checking,
+    Ready,
+    BluetoothOff,
+    PermissionNeeded,
+    Unavailable,
+}
+
 data class HopProfile(
     val name: String = "",
     val room: String = "",
@@ -35,4 +49,26 @@ data class HopPrefs(
     val profile: HopProfile = HopProfile(),
     val onboarded: Boolean = false,
     val keepScreenOn: Boolean = true,
+    val selfId: String = "",
+    val seeded: Boolean = false,
 )
+
+data class BlackoutSession(
+    val startedAtMillis: Long,
+    val status: BlackoutStatus = BlackoutStatus.None,
+)
+
+data class NearbyState(
+    val count: Int = 0,
+    val availability: NearbyAvailability = NearbyAvailability.Checking,
+) {
+    val needsPermission: Boolean get() = availability == NearbyAvailability.PermissionNeeded
+
+    fun statusLine(): String = when (availability) {
+        NearbyAvailability.Ready -> "$count nearby"
+        NearbyAvailability.BluetoothOff -> "Bluetooth off"
+        NearbyAvailability.PermissionNeeded -> "Nearby permission needed"
+        NearbyAvailability.Unavailable -> "Nearby unavailable"
+        NearbyAvailability.Checking -> "Nearby…"
+    }
+}
